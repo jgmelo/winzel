@@ -52,6 +52,7 @@ class Repo:
         self.env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
         self.env["WINZEL_PYTHON"] = sys.executable
         self.env["PYTHONDONTWRITEBYTECODE"] = "1"
+        self.env["PYTHONUTF8"] = "1"  # Windows: saída redirecionada em UTF-8, não cp1252
 
     def git(self, *args: str, check: bool = True) -> subprocess.CompletedProcess:
         return subprocess.run(
@@ -61,6 +62,7 @@ class Repo:
             capture_output=True,
             text=True,
             encoding="utf-8",
+            errors="replace",
             timeout=120,
             check=check,
         )

@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "generated_at": "2026-10-31T18:49:34",
+  "parent_hash": "384ac138a0e805dc8cea22bf8709c59c6a03616d",
+  "parent_message": "chore: infraestrutura da fase 0",
+  "branch": "main",
+  "duration_s": 3.73,
+  "totals": {
+    "passed": 40,
+    "failed": 0,
+    "skipped": 0,
+    "total": 40
+  },
+  "by_phase": {
+    "fase0": 40
+  },
+  "by_area": {
+    "execucao": 8,
+    "relatorio": 32
+  }
+}

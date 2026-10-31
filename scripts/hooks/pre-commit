@@ -33,6 +33,9 @@ if [ -n "$unstaged$untracked" ]; then
     exit 1
 fi
 
+# No Windows, a saída redirecionada do Python sairia em cp1252.
+export PYTHONUTF8=1
+
 "$PY" -m pytest -q --painel-historico
 status=$?
 if [ "$status" -ne 0 ]; then
