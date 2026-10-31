@@ -259,8 +259,8 @@ def test_aba_mudancas_lista_tipo_categoria_item_e_versoes(banco):
             tabela = app.query_one("#changes-table", DataTable)
             linhas = [tabela.get_row_at(i) for i in range(tabela.row_count)]
             assert linhas == [
-                ["➕ adicionado", "Programas", "Obsidian", "1.7.4"],
-                ["➖ removido", "Programas", "7-Zip 24.08 (x64)", "24.08"],
+                ["➕ adicionado", "Programas", "Obsidian", "1.7.4", ""],
+                ["➖ removido", "Programas", "7-Zip 24.08 (x64)", "24.08", ""],
             ]
 
     rodar(cenario())

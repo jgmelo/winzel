@@ -104,6 +104,16 @@ class CheckResult:
     metrics: list[Metric] = field(default_factory=list)
     error: str | None = None
     duration_ms: int = 0
+    # Set by the analysis before `status`/`summary` are replaced by the compared ones:
+    # the check's own status and summary (e.g. "6 programas").
+    raw_status: Status | None = None
+    raw_summary: str | None = None
+
+    @property
+    def collected(self) -> Status:
+        """OK when the items were collected; SKIPPED/ERROR when they are unknown."""
+        own = self.raw_status or self.status
+        return own if own.is_failure else Status.OK
 
 
 class Check(Protocol):

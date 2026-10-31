@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "generated_at": "2026-10-31T20:12:10",
+  "parent_hash": "552ed204dfcfbbb3bffbcf85fcc05743eafd3bf3",
+  "parent_message": "feat: restante do inventário (Store, tarefas, serviços, pip global e WSL)",
+  "branch": "main",
+  "duration_s": 20.256,
+  "totals": {
+    "passed": 293,
+    "failed": 0,
+    "skipped": 0,
+    "total": 293
+  },
+  "by_phase": {
+    "fase0": 40,
+    "fase1": 105,
+    "fase2": 74,
+    "fase3": 74
+  },
+  "by_area": {
+    "aprovacoes": 13,
+    "banco": 27,
+    "diff": 32,
+    "execucao": 33,
+    "interface": 34,
+    "inventario": 90,
+    "milestones": 32,
+    "relatorio": 32
+  }
+}

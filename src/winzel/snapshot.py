@@ -1,4 +1,8 @@
-"""Take a snapshot: run checks, compare inventory with the baseline, save everything."""
+"""Take a snapshot, and compare a snapshot's inventory with a reference.
+
+The same analysis runs when a snapshot is taken (against the default reference)
+and when the interface switches the reference of a snapshot already stored.
+"""
 
 from __future__ import annotations
 
@@ -6,18 +10,20 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from .context import Context
-from .diff import Change, diff_items
+from .diff import Change, apply_approvals, diff_items
 from .models import Check, CheckResult, Item, Status, worst
+from .reference import Reference, default_reference
 from .runner import run_checks
 from .status import inventory_status, inventory_summary
 from .store import SnapshotInfo, Store
 
 INVENTORY_AREA = "inventario"
+DEFAULT_KEEP_ALL_DAYS = 90
 
 
 @dataclass
 class CheckOutcome:
-    """A check's final result plus its comparison with the reference."""
+    """A check's result after comparison with the reference."""
 
     check_id: str
     label: str
@@ -33,14 +39,20 @@ class CheckOutcome:
 
     @property
     def is_baseline(self) -> bool:
-        """This snapshot is the category's baseline (nothing to compare against yet)."""
+        """This snapshot is the category's reference itself (nothing to compare yet)."""
         return self.comparable and self.reference is None
+
+    @property
+    def pending(self) -> list[Change]:
+        return [c for c in self.changes if c.affects_status]
 
 
 @dataclass
 class SnapshotReport:
     snapshot: SnapshotInfo
     outcomes: list[CheckOutcome]
+    reference: Reference | None = None
+    pruned: list[int] = field(default_factory=list)
 
     @property
     def overall_status(self) -> Status:
@@ -49,6 +61,10 @@ class SnapshotReport:
     @property
     def changes(self) -> list[Change]:
         return [c for o in self.outcomes for c in o.changes]
+
+    @property
+    def reference_label(self) -> str:
+        return self.reference.label if self.reference else "linha de base"
 
 
 OutcomeCallback = Callable[[CheckOutcome], None]
@@ -64,40 +80,69 @@ def elevation_text(is_admin: bool) -> str:
     return "com admin" if is_admin else "sem admin"
 
 
-def analyse(store: Store, check: Check, result: CheckResult, is_admin: bool) -> CheckOutcome:
-    """Compare an inventory result with its category baseline and set status/summary.
+def analyse(
+    store: Store,
+    check: Check,
+    result: CheckResult,
+    is_admin: bool,
+    reference: Reference | None = None,
+    current_id: int | None = None,
+    approvals: dict | None = None,
+) -> CheckOutcome:
+    """Compare an inventory result with its reference and set the final status/summary.
 
+    The check's own status and summary are kept in `raw_status`/`raw_summary`.
     A check that was skipped or failed is not compared: its items are unknown, which
     is different from "the items disappeared". A check marked `same_elevation_only`
-    is not compared with a baseline taken with a different elevation (⚪).
+    is not compared with a reference taken with a different elevation (⚪).
     """
+    if result.raw_status is None:
+        result.raw_status, result.raw_summary = result.status, result.summary
+    base = result.raw_summary or ""
     outcome = CheckOutcome(check.id, check.label, check.area, result)
-    if check.area != INVENTORY_AREA or result.status.is_failure:
+    if check.area != INVENTORY_AREA or result.collected.is_failure:
         return outcome
-    reference = store.baseline_for(check.id)
+
+    effective = reference.resolve(store, check.id, current_id) if reference else None
     if (
-        reference is not None
+        effective is not None
         and getattr(check, "same_elevation_only", False)
-        and reference.is_admin != is_admin
+        and effective.is_admin != is_admin
     ):
-        outcome.reference = reference
+        outcome.reference = effective
         result.status = Status.SKIPPED
+        what = (
+            "linha de base"
+            if reference is not None and reference.milestone and reference.milestone.is_baseline
+            else "referência"
+        )
         result.summary = (
-            f"{result.summary} — não comparada: linha de base feita "
-            f"{elevation_text(reference.is_admin)}, este snapshot {elevation_text(is_admin)}"
+            f"{base} — não comparada: {what} feita "
+            f"{elevation_text(effective.is_admin)}, este snapshot {elevation_text(is_admin)}"
         )
         return outcome
+
     outcome.comparable = True
-    outcome.reference = reference
+    outcome.reference = effective
     extra = own_status(check, result.items)
-    if reference is None:
+    if effective is None:
         result.status = extra
-        result.summary = inventory_summary([], result.summary, None)
+        if reference is None:
+            result.summary = f"{base} — linha de base registrada agora"
+        elif reference.milestone is None:
+            result.summary = f"{base} — sem snapshot anterior para comparar"
+        else:
+            result.summary = f"{base} — primeira leitura válida desde {reference.label}"
         return outcome
-    reference_items = store.items(reference.id, check.id)
-    outcome.changes = diff_items(reference_items, {i.key: i for i in result.items})
+
+    if effective.id == current_id:
+        changes: list[Change] = []
+    else:
+        reference_items = store.items(effective.id, check.id)
+        changes = diff_items(reference_items, {i.key: i for i in result.items})
+    outcome.changes = apply_approvals(changes, approvals or {})
     result.status = worst([inventory_status(outcome.changes), extra])
-    result.summary = inventory_summary(outcome.changes, result.summary, reference.created_at)
+    result.summary = inventory_summary(outcome.changes, base, reference.since(effective))
     return outcome
 
 
@@ -107,13 +152,18 @@ def take_snapshot(
     checks: list[Check],
     kind: str,
     on_progress: OutcomeCallback | None = None,
+    reference: Reference | None = None,
 ) -> SnapshotReport:
+    """Run the checks, compare with `reference` (default: latest milestone) and save."""
     created_at = ctx.now()
+    reference = reference or default_reference(store)
+    approvals = store.approvals()
     by_id = {c.id: c for c in checks}
     outcomes: dict[str, CheckOutcome] = {}
 
     def progress(result: CheckResult) -> None:
-        outcome = analyse(store, by_id[result.check_id], result, ctx.is_admin)
+        check = by_id[result.check_id]
+        outcome = analyse(store, check, result, ctx.is_admin, reference, None, approvals)
         outcomes[result.check_id] = outcome
         if on_progress is not None:
             on_progress(outcome)
@@ -122,4 +172,35 @@ def take_snapshot(
     ordered = [outcomes[c.id] for c in checks]
     snapshot_id = store.save_snapshot(created_at, kind, ctx.is_admin, [o.result for o in ordered])
     info = SnapshotInfo(id=snapshot_id, created_at=created_at, kind=kind, is_admin=ctx.is_admin)
-    return SnapshotReport(snapshot=info, outcomes=ordered)
+    keep_days = int(ctx.config.get("retention", {}).get("keep_all_days", DEFAULT_KEEP_ALL_DAYS))
+    pruned = store.apply_retention(created_at, keep_days)
+    return SnapshotReport(snapshot=info, outcomes=ordered, reference=reference, pruned=pruned)
+
+
+def compare_snapshot(
+    store: Store,
+    checks: list[Check],
+    snapshot: SnapshotInfo,
+    reference: Reference | None,
+) -> SnapshotReport:
+    """Compare a stored snapshot with another reference, without running the checks."""
+    runs = store.check_runs(snapshot.id)
+    approvals = store.approvals()
+    outcomes = []
+    for check in checks:
+        run = runs.get(check.id)
+        if run is None:
+            continue
+        failed = run.raw_status.is_failure
+        result = CheckResult(
+            check_id=check.id,
+            status=run.raw_status if failed else Status.OK,
+            summary=run.summary if failed else run.raw_summary,
+            items=[] if failed else list(store.items(snapshot.id, check.id).values()),
+            error=run.error,
+            duration_ms=run.duration_ms,
+        )
+        outcomes.append(
+            analyse(store, check, result, snapshot.is_admin, reference, snapshot.id, approvals)
+        )
+    return SnapshotReport(snapshot=snapshot, outcomes=outcomes, reference=reference)

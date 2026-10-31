@@ -66,9 +66,9 @@ O **winzel** é um utilitário de terminal que **observa, registra e compara** o
 |---|---|
 | Snapshot | Registro completo do inventário e das métricas, gravado a cada execução |
 | Linha de base | O primeiro snapshot gravado; referência padrão nas fases 1 e 2. É definida **por categoria**: o primeiro snapshot em que a checagem daquela categoria rodou sem erro e sem ser pulada. A partir da fase 3, registrada automaticamente como o milestone `linha-de-base` |
-| Milestone | Snapshot fixado e nomeado pelo usuário, com nota |
+| Milestone | Snapshot fixado e nomeado pelo usuário, com nota. Nome único sem diferenciar maiúsculas; `linha-de-base` é reservado e não pode ser apagado; os demais podem ser apagados, com confirmação |
 | Diferença | Comparação entre dois snapshots, por categoria: adicionados, removidos e alterados (versão) |
-| Aprovação | Item marcado como esperado; sai da contagem de alertas |
+| Aprovação | Item marcado como esperado; sai da contagem de alertas. Pode ser revogada, com confirmação |
 
 ## 5. Checagens
 
@@ -136,7 +136,7 @@ SQLite em `%LOCALAPPDATA%\winzel\winzel.db`.
 | Tabela | Colunas | Função |
 |---|---|---|
 | `snapshots` | `id`, `created_at`, `kind` (`auto`/`manual`), `is_admin` | Uma linha por execução. `auto`: gravado ao abrir a interface (ou com `r`); `manual`: gravado por `python -m winzel snapshot` |
-| `check_runs` | `snapshot_id`, `check_id`, `status`, `summary`, `duration_ms`, `error` | Resultado de cada checagem no snapshot |
+| `check_runs` | `snapshot_id`, `check_id`, `status`, `summary`, `duration_ms`, `error`, `raw_status`, `raw_summary` | Resultado de cada checagem no snapshot. `status`/`summary`: já comparados com a referência padrão do momento. `raw_status` (`ok`/`skipped`/`error`): se os itens foram coletados. `raw_summary`: resumo próprio da checagem (ex.: "6 programas"), usado para recomparar com outra referência |
 | `items` | `snapshot_id`, `category`, `key`, `version`, `details_json` | Inventário completo do snapshot |
 | `metrics` | `snapshot_id`, `name`, `value`, `unit` | Valores numéricos do snapshot |
 | `milestones` | `snapshot_id`, `name` (único), `note`, `created_at` | Marcos nomeados |
@@ -152,11 +152,14 @@ SQLite em `%LOCALAPPDATA%\winzel\winzel.db`.
 - **Alterado:** mesma chave, versão/atributo diferente. **Informativo:** aparece na aba Mudanças, mas **não afeta o status**.
 - **Aprovação** vale para o item (`category` + `key`) e o tipo de mudança, **em qualquer versão**. Um item aprovado como adicionado que depois for removido gera uma nova mudança não aprovada.
 - O status do inventário (🟢/🟡) considera apenas adicionados e removidos não aprovados.
+- Mudanças aprovadas continuam listadas (marcadas ✔) e aparecem no resumo: "3 novos (1 aprovado)". A aprovação vale com qualquer referência.
+- **Referência efetiva por categoria:** com um milestone, é o primeiro snapshot, a partir dele, em que a categoria foi coletada (`raw_status = ok`); com "último snapshot", é o último anterior ao atual em que foi coletada. Assim, um erro no dia do milestone não inutiliza a categoria.
 
 ### 6.3 Retenção
 
-- Milestones e seus snapshots: mantidos para sempre.
-- Snapshots automáticos com mais de 90 dias: reduzidos a um por mês.
+- Milestones e seus snapshots: mantidos para sempre, junto com a referência efetiva de cada categoria de cada milestone.
+- Snapshots automáticos com mais de 90 dias (`retention.keep_all_days`): reduzidos ao último de cada mês. Snapshots manuais nunca são apagados.
+- A retenção roda a cada snapshot gravado; apagar um snapshot apaga seus itens, checagens e métricas.
 
 ### 6.4 Evolução do esquema
 
@@ -214,6 +217,7 @@ class Check(Protocol):
 ```
 
 - Uma checagem nova é um arquivo novo em `checks/` que cumpre o contrato e se registra no registro de checagens; nenhuma outra parte precisa mudar.
+- Opcionais: `same_elevation_only` (só compara com referência de mesma elevação) e `status_rule(items)` (regra própria de status, como a do `pip_global`). A análise guarda o status e o resumo próprios em `CheckResult.raw_status`/`raw_summary`.
 - Todo `Check` tem testes no formato "dado este dado bruto de exemplo, devolve estes itens/métricas e este status".
 
 ### 7.3 Context (injeção de dependência)
@@ -240,7 +244,10 @@ As checagens nunca acessam o sistema, a configuração ou a hora diretamente; se
 ### 7.5 Pontos de entrada
 
 - `python -m winzel`: abre a interface Textual (roda as checagens e grava um snapshot ao abrir).
-- `python -m winzel snapshot`: roda as checagens, grava o snapshot e imprime um resumo, sem interface. Disponível desde a fase 1.
+- `python -m winzel snapshot [--referencia NOME|ultimo]`: roda as checagens, grava o snapshot e imprime um resumo, sem interface. Disponível desde a fase 1; `--referencia` desde a fase 3.
+- `python -m winzel milestones`: lista os milestones.
+- `python -m winzel milestone NOME [--nota TEXTO]`: fixa o último snapshot como milestone.
+- `python -m winzel milestone --apagar NOME`: apaga um milestone, após confirmação.
 
 ### 7.6 Estrutura (layout `src`)
 
@@ -295,14 +302,14 @@ Aplicação Textual, em português.
 
 ### 8.3 Teclas
 
-`r` atualizar · `m` novo milestone · `a` aprovar item · `p` abrir gráfico · `Tab` trocar de aba · `q` sair.
+`r` atualizar · `m` novo milestone · `a` aprovar item (ou revogar, se já aprovado) · `d` apagar o milestone escolhido como referência · `p` abrir gráfico · `Tab` trocar de aba · `q` sair.
 
 Cada tecla só existe a partir da fase em que sua função é implementada.
 
 ### 8.4 Referência para comparação
 
 - Fases 1 e 2: a **linha de base** (primeiro snapshot gravado).
-- A partir da fase 3: o **último milestone**, trocável pelo seletor na aba Mudanças, que também oferece **"último snapshot"** como referência.
+- A partir da fase 3: o **último milestone** (o de snapshot mais recente), trocável pelo seletor na aba Mudanças, que também oferece **"último snapshot"** como referência. Trocar a referência recompara o snapshot exibido (aba Mudanças e cartões da Visão geral) sem rodar as checagens.
 
 ## 9. Testes
 

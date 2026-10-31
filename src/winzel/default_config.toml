@@ -30,3 +30,8 @@ python = ""
 
 [checks.wsl_distros]
 timeout_s = 20
+
+# Retenção (SPEC 6.3): snapshots automáticos mais antigos que isto são reduzidos
+# a um por mês. Manuais, milestones e suas referências nunca são apagados.
+[retention]
+keep_all_days = 90

@@ -18,16 +18,22 @@ def _count(n: int, singular: str, plural: str) -> str:
 
 
 def describe_changes(changes: list[Change]) -> str:
-    added = sum(1 for c in changes if c.kind is ChangeKind.ADDED)
-    removed = sum(1 for c in changes if c.kind is ChangeKind.REMOVED)
-    changed = sum(1 for c in changes if c.kind is ChangeKind.CHANGED)
+    """E.g. '3 novos (1 aprovado), 1 removido, 2 alterados'."""
+    words = {
+        ChangeKind.ADDED: ("novo", "novos"),
+        ChangeKind.REMOVED: ("removido", "removidos"),
+        ChangeKind.CHANGED: ("alterado", "alterados"),
+    }
     parts = []
-    if added:
-        parts.append(_count(added, "novo", "novos"))
-    if removed:
-        parts.append(_count(removed, "removido", "removidos"))
-    if changed:
-        parts.append(_count(changed, "alterado", "alterados"))
+    for kind, (singular, plural) in words.items():
+        of_kind = [c for c in changes if c.kind is kind]
+        if not of_kind:
+            continue
+        text = _count(len(of_kind), singular, plural)
+        approved = sum(1 for c in of_kind if c.approved)
+        if approved:
+            text += f" ({_count(approved, 'aprovado', 'aprovados')})"
+        parts.append(text)
     return ", ".join(parts)
 
 
@@ -35,10 +41,7 @@ def format_date(moment: datetime) -> str:
     return moment.strftime("%d/%m/%Y %H:%M")
 
 
-def inventory_summary(changes: list[Change], base: str, reference_at: datetime | None) -> str:
+def inventory_summary(changes: list[Change], base: str, since: str) -> str:
     """E.g. '152 programas — 3 novos, 1 alterado desde a linha de base (31/10/2026 14:30)'."""
-    if reference_at is None:
-        return f"{base} — linha de base registrada agora"
-    since = f"desde a linha de base ({format_date(reference_at)})"
     described = describe_changes(changes) or "sem mudanças"
-    return f"{base} — {described} {since}"
+    return f"{base} — {described} desde {since}"

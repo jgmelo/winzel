@@ -7,13 +7,21 @@ import os
 import re
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from importlib import resources
 from pathlib import Path
 
 from ..models import CheckResult, Item, Status
 
 _MIGRATION_NAME = re.compile(r"^(\d{4})_[\w-]+\.sql$")
+
+BASELINE_MILESTONE = "linha-de-base"
+BASELINE_NOTE = "Registrado automaticamente: primeiro snapshot."
+APPROVABLE = ("added", "removed")
+
+
+class MilestoneError(ValueError):
+    """Invalid milestone operation (empty/duplicate/reserved name, unknown snapshot...)."""
 
 
 def default_db_path() -> Path:
@@ -87,6 +95,29 @@ class CheckRun:
     summary: str
     duration_ms: int
     error: str | None
+    raw_status: Status = Status.OK
+    raw_summary: str = ""
+
+
+@dataclass(frozen=True)
+class MilestoneInfo:
+    name: str
+    note: str
+    created_at: datetime
+    snapshot: SnapshotInfo
+
+    @property
+    def is_baseline(self) -> bool:
+        return self.name == BASELINE_MILESTONE
+
+
+@dataclass(frozen=True)
+class Approval:
+    category: str
+    key: str
+    change: str
+    approved_at: datetime
+    reason: str
 
 
 class Store:
@@ -118,8 +149,21 @@ class Store:
             snapshot_id = cursor.lastrowid
             for r in results:
                 conn.execute(
-                    "INSERT INTO check_runs VALUES (?, ?, ?, ?, ?, ?)",
-                    (snapshot_id, r.check_id, r.status.value, r.summary, r.duration_ms, r.error),
+                    """
+                    INSERT INTO check_runs (snapshot_id, check_id, status, summary,
+                        duration_ms, error, raw_status, raw_summary)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        snapshot_id,
+                        r.check_id,
+                        r.status.value,
+                        r.summary,
+                        r.duration_ms,
+                        r.error,
+                        r.collected.value,
+                        r.raw_summary if r.raw_summary is not None else r.summary,
+                    ),
                 )
                 conn.executemany(
                     "INSERT INTO items VALUES (?, ?, ?, ?, ?)",
@@ -132,6 +176,21 @@ class Store:
                     "INSERT INTO metrics VALUES (?, ?, ?, ?)",
                     [(snapshot_id, m.name, m.value, m.unit) for m in r.metrics],
                 )
+            # The first snapshot becomes the `linha-de-base` milestone.
+            conn.execute(
+                """
+                INSERT INTO milestones (snapshot_id, name, note, created_at)
+                SELECT id, ?, ?, ? FROM snapshots
+                WHERE id = (SELECT MIN(id) FROM snapshots)
+                  AND NOT EXISTS (SELECT 1 FROM milestones WHERE name = ?)
+                """,
+                (
+                    BASELINE_MILESTONE,
+                    BASELINE_NOTE,
+                    created_at.isoformat(timespec="seconds"),
+                    BASELINE_MILESTONE,
+                ),
+            )
             conn.execute("COMMIT")
         except Exception:
             conn.execute("ROLLBACK")
@@ -172,6 +231,8 @@ class Store:
                 summary=r["summary"],
                 duration_ms=r["duration_ms"],
                 error=r["error"],
+                raw_status=Status(r["raw_status"]),
+                raw_summary=r["raw_summary"],
             )
             for r in rows
         }
@@ -191,15 +252,168 @@ class Store:
             for r in rows
         }
 
-    def baseline_for(self, check_id: str, up_to: int | None = None) -> SnapshotInfo | None:
-        """Baseline of a category: first snapshot where its check ran (not skipped/error)."""
+    def previous_snapshot(self, snapshot_id: int) -> SnapshotInfo | None:
+        row = self.conn.execute(
+            "SELECT * FROM snapshots WHERE id < ? ORDER BY id DESC LIMIT 1", (snapshot_id,)
+        ).fetchone()
+        return self._info(row) if row else None
+
+    # --- references -----------------------------------------------------------
+    # A category can only be compared with a snapshot where its items were collected
+    # (raw_status 'ok'); a skipped or failed check says nothing about its items.
+
+    def reference_from(
+        self, check_id: str, from_id: int, up_to: int | None = None
+    ) -> SnapshotInfo | None:
+        """First snapshot with id >= from_id (and <= up_to) where the category was collected."""
         row = self.conn.execute(
             """
             SELECT s.* FROM snapshots s
             JOIN check_runs c ON c.snapshot_id = s.id
-            WHERE c.check_id = ? AND c.status NOT IN (?, ?) AND (? IS NULL OR s.id <= ?)
+            WHERE c.check_id = ? AND c.raw_status = 'ok' AND s.id >= ?
+              AND (? IS NULL OR s.id <= ?)
             ORDER BY s.id LIMIT 1
             """,
-            (check_id, Status.SKIPPED.value, Status.ERROR.value, up_to, up_to),
+            (check_id, from_id, up_to, up_to),
         ).fetchone()
         return self._info(row) if row else None
+
+    def reference_before(self, check_id: str, before_id: int | None) -> SnapshotInfo | None:
+        """Last snapshot before `before_id` (or the latest) where the category was collected."""
+        row = self.conn.execute(
+            """
+            SELECT s.* FROM snapshots s
+            JOIN check_runs c ON c.snapshot_id = s.id
+            WHERE c.check_id = ? AND c.raw_status = 'ok' AND (? IS NULL OR s.id < ?)
+            ORDER BY s.id DESC LIMIT 1
+            """,
+            (check_id, before_id, before_id),
+        ).fetchone()
+        return self._info(row) if row else None
+
+    def baseline_for(self, check_id: str, up_to: int | None = None) -> SnapshotInfo | None:
+        """Baseline of a category: first snapshot where its items were collected."""
+        return self.reference_from(check_id, 0, up_to)
+
+    # --- milestones -----------------------------------------------------------
+
+    def _milestone(self, row: sqlite3.Row) -> MilestoneInfo:
+        snapshot = self.snapshot(row["snapshot_id"])
+        assert snapshot is not None
+        return MilestoneInfo(
+            name=row["name"],
+            note=row["note"],
+            created_at=datetime.fromisoformat(row["created_at"]),
+            snapshot=snapshot,
+        )
+
+    def milestones(self) -> list[MilestoneInfo]:
+        """All milestones, the most recent snapshot first."""
+        rows = self.conn.execute(
+            "SELECT * FROM milestones ORDER BY snapshot_id DESC, created_at DESC, rowid DESC"
+        ).fetchall()
+        return [self._milestone(r) for r in rows]
+
+    def milestone(self, name: str) -> MilestoneInfo | None:
+        row = self.conn.execute(
+            "SELECT * FROM milestones WHERE name = ? COLLATE NOCASE", (name.strip(),)
+        ).fetchone()
+        return self._milestone(row) if row else None
+
+    def latest_milestone(self) -> MilestoneInfo | None:
+        found = self.milestones()
+        return found[0] if found else None
+
+    def create_milestone(
+        self, snapshot_id: int, name: str, note: str, created_at: datetime
+    ) -> MilestoneInfo:
+        name = name.strip()
+        if not name:
+            raise MilestoneError("o nome do milestone é obrigatório")
+        if name.lower() == BASELINE_MILESTONE:
+            raise MilestoneError(f"o nome {BASELINE_MILESTONE} é reservado")
+        if self.snapshot(snapshot_id) is None:
+            raise MilestoneError(f"snapshot #{snapshot_id} não existe")
+        if self.milestone(name) is not None:
+            raise MilestoneError(f"já existe um milestone chamado {name}")
+        self.conn.execute(
+            "INSERT INTO milestones (snapshot_id, name, note, created_at) VALUES (?, ?, ?, ?)",
+            (snapshot_id, name, note.strip(), created_at.isoformat(timespec="seconds")),
+        )
+        created = self.milestone(name)
+        assert created is not None
+        return created
+
+    def delete_milestone(self, name: str) -> None:
+        found = self.milestone(name)
+        if found is None:
+            raise MilestoneError(f"milestone {name.strip()} não existe")
+        if found.is_baseline:
+            raise MilestoneError(f"o milestone {BASELINE_MILESTONE} não pode ser apagado")
+        self.conn.execute("DELETE FROM milestones WHERE name = ?", (found.name,))
+
+    # --- approvals ------------------------------------------------------------
+
+    def approve(
+        self, category: str, key: str, change: str, reason: str, approved_at: datetime
+    ) -> None:
+        if change not in APPROVABLE:
+            raise ValueError(f"só mudanças {APPROVABLE} podem ser aprovadas, não {change!r}")
+        self.conn.execute(
+            "INSERT OR REPLACE INTO approvals VALUES (?, ?, ?, ?, ?)",
+            (category, key, change, approved_at.isoformat(timespec="seconds"), reason.strip()),
+        )
+
+    def revoke(self, category: str, key: str, change: str) -> None:
+        self.conn.execute(
+            "DELETE FROM approvals WHERE category = ? AND key = ? AND change = ?",
+            (category, key, change),
+        )
+
+    def approvals(self) -> dict[tuple[str, str, str], Approval]:
+        rows = self.conn.execute("SELECT * FROM approvals").fetchall()
+        return {
+            (r["category"], r["key"], r["change"]): Approval(
+                category=r["category"],
+                key=r["key"],
+                change=r["change"],
+                approved_at=datetime.fromisoformat(r["approved_at"]),
+                reason=r["reason"],
+            )
+            for r in rows
+        }
+
+    # --- retention (SPEC 6.3) ---------------------------------------------------
+
+    def protected_snapshots(self) -> set[int]:
+        """Milestone snapshots plus the effective reference of each category of each milestone."""
+        protected: set[int] = set()
+        check_ids = [r[0] for r in self.conn.execute("SELECT DISTINCT check_id FROM check_runs")]
+        for milestone in self.milestones():
+            protected.add(milestone.snapshot.id)
+            for check_id in check_ids:
+                ref = self.reference_from(check_id, milestone.snapshot.id)
+                if ref is not None:
+                    protected.add(ref.id)
+        return protected
+
+    def apply_retention(self, now: datetime, keep_all_days: int = 90) -> list[int]:
+        """Automatic snapshots older than `keep_all_days` are reduced to the last one per month.
+
+        Manual snapshots and protected snapshots (see `protected_snapshots`) are kept.
+        Returns the ids that were deleted.
+        """
+        limit = (now - timedelta(days=keep_all_days)).isoformat(timespec="seconds")
+        old = self.conn.execute(
+            "SELECT id, created_at FROM snapshots WHERE kind = 'auto' AND created_at < ?"
+            " ORDER BY id",
+            (limit,),
+        ).fetchall()
+        last_of_month: dict[str, int] = {}
+        for row in old:
+            last_of_month[row["created_at"][:7]] = row["id"]
+        keep = set(last_of_month.values()) | self.protected_snapshots()
+        doomed = [row["id"] for row in old if row["id"] not in keep]
+        if doomed:
+            self.conn.executemany("DELETE FROM snapshots WHERE id = ?", [(i,) for i in doomed])
+        return doomed

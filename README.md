@@ -3,8 +3,7 @@
 Utilitário de terminal que **observa, registra e compara** o estado da instalação do
 Windows 11 ao longo do tempo. A especificação completa está em [`SPEC.md`](SPEC.md).
 
-**Estado atual:** fase 2 (inventário completo: programas, apps da Store, inicialização,
-tarefas agendadas, serviços, Python global e WSL). O painel de testes em
+**Estado atual:** fase 3 (inventário completo, milestones, aprovações e retenção). O painel de testes em
 [`docs/testes/index.html`](docs/testes/index.html) mostra o que o winzel sabe fazer hoje.
 
 ## Uso
@@ -12,10 +11,15 @@ tarefas agendadas, serviços, Python global e WSL). O painel de testes em
 ```powershell
 .venv\Scripts\python.exe -m winzel            # interface (grava um snapshot ao abrir)
 .venv\Scripts\python.exe -m winzel snapshot   # sem interface: grava e imprime o resumo
+.venv\Scripts\python.exe -m winzel snapshot --referencia ultimo
+.venv\Scripts\python.exe -m winzel milestones                 # lista os milestones
+.venv\Scripts\python.exe -m winzel milestone limpo --nota "pós-formatação"
+.venv\Scripts\python.exe -m winzel milestone --apagar limpo   # pede confirmação
 ```
 
 Opções: `--db CAMINHO` (padrão `%LOCALAPPDATA%\winzel\winzel.db`) e `--config CAMINHO`
-(padrão `%APPDATA%\winzel\config.toml`). Teclas: `Tab` troca de aba, `r` atualiza, `q` sai.
+(padrão `%APPDATA%\winzel\config.toml`). Teclas: `Tab` troca de aba, `r` atualiza, `m` cria milestone, `a` aprova (ou revoga) a
+mudança selecionada, `d` apaga o milestone escolhido como referência, `q` sai.
 
 ## Ambiente de desenvolvimento (Windows)
 
