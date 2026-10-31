@@ -22,6 +22,12 @@ class DiskUsage:
 
 
 @dataclass(frozen=True)
+class ClearResult:
+    removed: int
+    failed: int
+
+
+@dataclass(frozen=True)
 class DirSize:
     bytes: int
     files: int
@@ -50,6 +56,16 @@ class FileSystem(Protocol):
     def read_text(self, path: str) -> str: ...
 
     def remove(self, path: str) -> None: ...
+
+    def exists(self, path: str) -> bool: ...
+
+    def list_dirs(self, path: str) -> list[str]:
+        """Names of the direct subfolders. Raises FileNotFoundError if missing."""
+        ...
+
+    def clear_dir(self, path: str) -> ClearResult:
+        """Delete everything inside `path` (not the folder itself); files in use are skipped."""
+        ...
 
 
 class RealFileSystem:
@@ -98,6 +114,31 @@ class RealFileSystem:
 
     def remove(self, path: str) -> None:
         Path(path).unlink(missing_ok=True)
+
+    def exists(self, path: str) -> bool:
+        return os.path.exists(path)
+
+    def list_dirs(self, path: str) -> list[str]:
+        if not os.path.isdir(path):
+            raise FileNotFoundError(path)
+        return sorted(e.name for e in os.scandir(path) if e.is_dir(follow_symlinks=False))
+
+    def clear_dir(self, path: str) -> ClearResult:
+        import shutil
+
+        if not os.path.isdir(path):
+            raise FileNotFoundError(path)
+        removed = failed = 0
+        for entry in os.scandir(path):
+            try:
+                if entry.is_dir(follow_symlinks=False):
+                    shutil.rmtree(entry.path)
+                else:
+                    os.unlink(entry.path)
+                removed += 1
+            except OSError:
+                failed += 1
+        return ClearResult(removed=removed, failed=failed)
 
 
 def gb(value: float) -> float:

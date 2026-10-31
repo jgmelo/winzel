@@ -65,3 +65,32 @@ problem_below_pct = 60
 [checks.ssd]
 timeout_s = 30
 warn_above_wear_pct = 50
+
+# --- Atualizações, segurança e backup (fase 5) -----------------------------------
+[checks.winget_updates]
+timeout_s = 60
+
+[checks.windows_update]
+# A busca do Windows Update é lenta.
+timeout_s = 120
+
+[checks.defender]
+timeout_s = 30
+warn_signature_days = 3
+
+[checks.encryption]
+timeout_s = 30
+
+[checks.restore_point]
+timeout_s = 30
+warn_after_days = 30
+
+[checks.git_repos]
+timeout_s = 60
+projects_dir = "D:\\projetos"
+
+# --- Ações (aba Ações) -------------------------------------------------------------
+[actions.sandboxie]
+start_exe = "C:\\Program Files\\Sandboxie-Plus\\Start.exe"
+# Pasta das caixas do usuário (FileRootPath do Sandboxie: C:\Sandbox\%USER%\%SANDBOX%).
+boxes_dir = "C:\\Sandbox\\%USERNAME%"

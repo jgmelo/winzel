@@ -7,7 +7,7 @@ from typing import ClassVar
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, Static
 
@@ -16,6 +16,7 @@ DIALOG_CSS = """
 .dialog .title { text-style: bold; margin-bottom: 1; }
 .dialog Input { margin-bottom: 1; }
 .dialog .error { color: $error; height: auto; }
+.dialog .details { height: auto; max-height: 16; }
 .dialog .buttons { height: auto; align-horizontal: right; margin-top: 1; }
 .dialog Button { margin-left: 2; }
 """
@@ -105,14 +106,18 @@ class ApproveDialog(_Dialog[str]):
 class ConfirmDialog(_Dialog[bool]):
     """Explicit confirmation: returns True only when the user presses the confirm button."""
 
-    def __init__(self, question: str, confirm_label: str) -> None:
+    def __init__(self, question: str, confirm_label: str, details: str = "") -> None:
         super().__init__()
         self.question = question
         self.confirm_label = confirm_label
+        self.details = details
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="dialog"):
             yield Label(self.question, classes="title")
+            if self.details:
+                with VerticalScroll(classes="details"):
+                    yield Static(self.details, id="confirm-details", markup=False)
             with Horizontal(classes="buttons"):
                 yield Button("Cancelar", id="cancel")
                 yield Button(self.confirm_label, id="ok", variant="error")

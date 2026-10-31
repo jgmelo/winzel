@@ -333,6 +333,8 @@ def test_tab_alterna_entre_as_abas(banco):
             await pilot.press("tab")
             assert tabs.active == "timeline"
             await pilot.press("tab")
+            assert tabs.active == "actions"
+            await pilot.press("tab")
             assert tabs.active == "overview"
 
     rodar(cenario())

@@ -40,6 +40,12 @@ BUILTIN = [
     "clutter",
     "battery",
     "ssd",
+    "winget_updates",
+    "windows_update",
+    "defender",
+    "encryption",
+    "restore_point",
+    "git_repos",
 ]
 
 

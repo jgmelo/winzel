@@ -13,6 +13,7 @@ from textual.screen import ModalScreen
 from textual.widgets import DataTable, Footer, Header, Select, Static, TabbedContent, TabPane
 from textual_plotext import PlotextPlot
 
+from ..actions import ACTIONS, ActionResult, Plan, get_action
 from ..cli import ADMIN_WARNING, KIND_LABELS
 from ..config import use_emoji
 from ..context import Context
@@ -34,7 +35,7 @@ from .dialogs import ApproveDialog, ConfirmDialog, MilestoneDialog
 ALL = "all"
 PENDING_ONLY = "pending"
 PENDING = "⏳"
-TABS = ["overview", "changes", "timeline"]
+TABS = ["overview", "changes", "timeline", "actions"]
 
 SnapshotFn = Callable[..., SnapshotReport]
 
@@ -80,6 +81,9 @@ class WinzelApp(App[None]):
     #timeline-series { width: 50; margin: 0 1; }
     #timeline-info { padding: 0 2; color: $text-muted; }
     #timeline-plot { height: 1fr; min-height: 12; }
+    #actions-help { padding: 0 1; color: $text-muted; }
+    #actions-table { height: auto; margin: 1 0; }
+    #action-output { padding: 0 2; height: auto; }
     """
     BINDINGS: ClassVar = [
         Binding("q", "quit", "Sair"),
@@ -158,11 +162,27 @@ class WinzelApp(App[None]):
                     id="timeline-info",
                 )
                 yield PlotextPlot(id="timeline-plot")
+            with TabPane("Ações", id="actions"):
+                yield Static(
+                    "Enter: preparar a ação selecionada. Nada é feito sem a sua confirmação.",
+                    id="actions-help",
+                )
+                yield DataTable(id="actions-table", cursor_type="row")
+                yield Static("", id="action-output", markup=False)
         yield Footer()
 
     def on_mount(self) -> None:
         table = self.query_one("#changes-table", DataTable)
         table.add_columns("Tipo", "Categoria", "Item", "Versão anterior → atual", "Aprovação")
+        actions = self.query_one("#actions-table", DataTable)
+        actions.add_columns("Ação", "Descrição", "Requer admin")
+        for action in ACTIONS:
+            actions.add_row(
+                action.label,
+                action.description,
+                "sim" if action.requires_admin else "",
+                key=action.id,
+            )
         self.start_snapshot()
 
     # --- snapshot -----------------------------------------------------------
@@ -352,6 +372,53 @@ class WinzelApp(App[None]):
             draw_terminal_plot(plot.plt, series, self.timeline.milestones)
         plot.refresh()
 
+    # --- Ações ----------------------------------------------------------------
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        if event.data_table.id == "actions-table":
+            self.prepare_action(str(event.row_key.value))
+
+    def prepare_action(self, action_id: str) -> None:
+        """Plan the action (read only) and ask for explicit confirmation before running it."""
+        if not self._can_act():
+            return
+        action = get_action(action_id)
+        if action_id == "milestone":
+            self.action_milestone()
+            return
+        output = self.query_one("#action-output", Static)
+        if action.requires_admin and not self.ctx.is_admin:
+            output.update(f"{action.label}: requer executar o winzel como administrador.")
+            return
+        plan = action.plan(self.ctx, self.report)
+        if plan.nothing_to_do:
+            output.update(f"{action.label}: nada a fazer — {plan.nothing_to_do}")
+            return
+
+        def confirmed(answer: bool | None) -> None:
+            if answer:
+                output.update(f"{action.label}: executando…")
+                self._execute_action(action, plan)
+            else:
+                output.update(f"{action.label}: cancelada; nada foi feito.")
+
+        self.push_screen(ConfirmDialog(plan.title, "Executar", details=plan.details), confirmed)
+
+    @work(thread=True, exclusive=True, group="action")
+    def _execute_action(self, action, plan: Plan) -> None:
+        try:
+            result = action.execute(self.ctx, plan)
+        except Exception as exc:  # report it instead of crashing the interface
+            result = ActionResult(False, [f"✖ {exc}"])
+        self.call_from_thread(self._show_action_result, action, result)
+
+    def _show_action_result(self, action, result: ActionResult) -> None:
+        status = "concluída" if result.ok else "concluída com falhas"
+        self.query_one("#action-output", Static).update(
+            f"{action.label}: {status}. Pressione r para um novo snapshot.\n{result.text}"
+        )
+        self.notify(f"{action.label}: {status}.", severity="information" if result.ok else "error")
+
     # --- actions ------------------------------------------------------------
 
     def action_open_plot(self) -> None:
@@ -385,6 +452,8 @@ class WinzelApp(App[None]):
         tabs.active = TABS[(current + 1) % len(TABS)]
         if tabs.active == "changes":
             self.query_one("#changes-table", DataTable).focus()
+        elif tabs.active == "actions":
+            self.query_one("#actions-table", DataTable).focus()
 
     def action_milestone(self) -> None:
         if not self._can_act():

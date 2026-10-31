@@ -10,7 +10,7 @@ from typing import Any
 from winzel.commands import CommandResult
 from winzel.config import load_default_config
 from winzel.context import Context
-from winzel.filesystem import DirSize, DiskUsage
+from winzel.filesystem import ClearResult, DirSize, DiskUsage
 
 DATA = Path(__file__).parent / "data"
 
@@ -75,8 +75,15 @@ class FakeFileSystem:
         self.files: dict[str, int] = {}
         self.dirs: dict[str, DirSize] = {}
         self.texts: dict[str, str] = {}
-        self.env: dict[str, str] = {"TEMP": "C:\\Users\\jg\\AppData\\Local\\Temp"}
+        self.env: dict[str, str] = {
+            "TEMP": "C:\\Users\\jg\\AppData\\Local\\Temp",
+            "USERNAME": "jg",
+        }
         self.removed: list[str] = []
+        self.existing: set[str] = set()
+        self.subdirs: dict[str, list[str]] = {}
+        self.clear_results: dict[str, ClearResult] = {}
+        self.cleared: list[str] = []
 
     @staticmethod
     def _get(table: dict, path: str):
@@ -107,6 +114,18 @@ class FakeFileSystem:
 
     def remove(self, path: str) -> None:
         self.removed.append(path)
+
+    def exists(self, path: str) -> bool:
+        known = set(self.existing) | set(self.files) | set(self.dirs) | set(self.subdirs)
+        return path.lower() in {k.lower() for k in known}
+
+    def list_dirs(self, path: str) -> list[str]:
+        return list(self._get(self.subdirs, path))
+
+    def clear_dir(self, path: str) -> ClearResult:
+        result = self._get(self.clear_results, path)
+        self.cleared.append(path)
+        return result
 
 
 class FixedClock:

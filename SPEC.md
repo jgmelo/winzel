@@ -119,13 +119,13 @@ Valores numéricos ao longo do tempo.
 
 | ID | Checagem | Fonte | Status padrão | Admin | Fase |
 |---|---|---|---|---|---|
-| `winget_updates` | Pacotes com atualização | `Get-WinGetPackage` (`Microsoft.WinGet.Client`) | 🟡 se houver alguma | Não | 5 |
-| `windows_update` | Atualizações pendentes | COM `Microsoft.Update.Session` (lenta; timeout próprio) | 🟡 se houver alguma | Não | 5 |
-| `defender` | Proteção ativa e idade das assinaturas | `Get-MpComputerStatus` | 🔴 desativado · 🟡 > 3 dias | Não | 5 |
-| `restore_point` | Último ponto de restauração | `Get-ComputerRestorePoint` | 🟡 > 30 dias | Sim | 5 |
-| `encryption` | Criptografia do disco | `Get-BitLockerVolume` | 🟡 desativada | Sim | 5 |
-| `disk_image` | Idade da última imagem de disco | Pasta configurada no SSD externo | 🟡 > 60 dias · ⚪ disco ausente | Não | 5 |
-| `git_repos` | Repositórios com pendências | `git status --porcelain` e `git rev-list @{u}..HEAD` nos repositórios de `D:\projetos` | 🟡 com alterações não enviadas | Não | 5 |
+| `winget_updates` | Pacotes com atualização | `Get-WinGetPackage` (`Microsoft.WinGet.Client`), com `IsUpdateAvailable`; o resumo cita até 3 pacotes. Sem o módulo → ⚪ com a instrução de instalação | 🟡 se houver alguma | Não | 5 |
+| `windows_update` | Atualizações pendentes | COM `Microsoft.Update.Session` (`IsInstalled=0 and IsHidden=0`; lenta: timeout padrão de 120 s) | 🟡 se houver alguma | Não | 5 |
+| `defender` | Proteção ativa e idade das assinaturas | `Get-MpComputerStatus` (antivírus e proteção em tempo real; idade calculada pelo relógio do `Context`) | 🔴 desativado · 🟡 > 3 dias | Não | 5 |
+| `restore_point` | Último ponto de restauração | `Get-ComputerRestorePoint` (o mais recente) | 🟡 > 30 dias ou nenhum | Sim | 5 |
+| `encryption` | Criptografia do disco | WMI `Win32_EncryptableVolume` do C: (funciona também com a criptografia de dispositivo do Windows Home; valores não traduzidos, ao contrário do `manage-bde`) | 🟡 desativada ou volume não criptografável | Sim | 5 |
+| `disk_image` | Idade da última imagem de disco | Pasta configurada no SSD externo | 🟡 > 60 dias · ⚪ disco ausente | Não | **adiada** (sem como testar ainda; ferramenta, pasta e identificação do SSD a definir) |
+| `git_repos` | Repositórios com pendências | `git status --porcelain` e `git rev-list @{u}..HEAD` nas subpastas diretas de `D:\projetos` que são repositórios; branch sem remoto conta como pendente (o código não tem cópia fora da máquina). Pasta ou git ausentes → ⚪ | 🟡 com alterações não enviadas | Não | 5 |
 
 ## 6. Modelo de dados
 
@@ -299,7 +299,7 @@ Aplicação Textual, em português.
 | **Visão geral** | 1 | Cartões por área com status e resumo de uma linha (ex.: "Programas 🟡 3 novos desde *linha de base*"). Topo: referência atual e data/hora do snapshot; aviso se o snapshot foi feito sem admin |
 | **Mudanças** | 1 (básica), 3 (completa) | Tabela: tipo (➕ adicionado, ➖ removido, 🔄 alterado), categoria, item, versão anterior → atual. Filtros por categoria e tipo. Fase 3: seletor de milestone de referência e aprovação de itens |
 | **Linha do tempo** | 4 | Seletor de série (cada métrica e a quantidade de itens de cada categoria do inventário; padrão: % livre no C:). Minigráfico no terminal (`textual-plotext`) + gráfico detalhado no matplotlib (`p`), em processo separado (`python -m winzel.plots`), com milestones como linhas verticais rotuladas. Snapshots em que a categoria não foi coletada ficam fora da série |
-| **Ações** | 5 | Lista fechada de ações (ex.: atualizar pacotes do winget, esvaziar sandboxes, criar milestone), cada uma com confirmação explícita |
+| **Ações** | 5 | Lista fechada: atualizar os pacotes do winget listados no snapshot (`winget upgrade --id … --exact --silent`, um a um); esvaziar o `%TEMP%` do usuário (arquivos em uso são mantidos); esvaziar as caixas do Sandboxie-Plus pelo próprio Sandboxie (`Start.exe /box:<caixa> delete_sandbox_silent`); criar ponto de restauração (admin); criar milestone. Cada ação primeiro monta um **plano só de leitura**, mostrado na confirmação com exatamente o que será feito (pacotes, pastas, comandos); só o botão "Executar" roda a ação, em segundo plano, com o resultado na tela. Sem nada a fazer, ou sem a elevação exigida, nem pede confirmação |
 
 ### 8.3 Teclas
 

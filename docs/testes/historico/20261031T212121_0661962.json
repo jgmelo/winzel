@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "generated_at": "2026-10-31T21:21:21",
+  "parent_hash": "06619620b866ecaecd3ea98f2deda51291517563",
+  "parent_message": "feat: métricas de disco, bateria e SSD, e aba Linha do tempo",
+  "branch": "main",
+  "duration_s": 39.618,
+  "totals": {
+    "passed": 393,
+    "failed": 0,
+    "skipped": 0,
+    "total": 393
+  },
+  "by_phase": {
+    "fase0": 40,
+    "fase1": 105,
+    "fase2": 74,
+    "fase3": 74,
+    "fase4": 51,
+    "fase5": 49
+  },
+  "by_area": {
+    "aprovacoes": 13,
+    "armazenamento": 20,
+    "atualizacoes": 8,
+    "backup": 12,
+    "banco": 27,
+    "diff": 32,
+    "execucao": 33,
+    "hardware": 17,
+    "interface": 68,
+    "inventario": 90,
+    "milestones": 32,
+    "relatorio": 32,
+    "seguranca": 9
+  }
+}
