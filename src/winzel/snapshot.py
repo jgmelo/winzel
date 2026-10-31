@@ -191,6 +191,18 @@ def compare_snapshot(
         run = runs.get(check.id)
         if run is None:
             continue
+        if check.area != INVENTORY_AREA:
+            # Metrics and other checks do not depend on the reference: keep what was saved.
+            result = CheckResult(
+                check_id=check.id,
+                status=run.status,
+                summary=run.summary,
+                metrics=store.metrics(snapshot.id, check.id),
+                error=run.error,
+                duration_ms=run.duration_ms,
+            )
+            outcomes.append(CheckOutcome(check.id, check.label, check.area, result))
+            continue
         failed = run.raw_status.is_failure
         result = CheckResult(
             check_id=check.id,

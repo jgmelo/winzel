@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<BatteryReport xmlns="http://schemas.microsoft.com/battery/2012">
+  <ReportInformation>
+    <ReportVersion>1</ReportVersion>
+    <LocalScanTime>2026-10-31T14:30:00</LocalScanTime>
+  </ReportInformation>
+  <SystemInformation>
+    <ComputerName>VIVOBOOK</ComputerName>
+    <SystemManufacturer>ASUSTeK COMPUTER INC.</SystemManufacturer>
+  </SystemInformation>
+  <Batteries>
+    <Battery>
+      <Id>ASUS Battery</Id>
+      <Manufacturer>ASUSTeK</Manufacturer>
+      <SerialNumber>12345</SerialNumber>
+      <Chemistry>LION</Chemistry>
+      <LongTerm>1</LongTerm>
+      <RelativeCapacity>0</RelativeCapacity>
+      <DesignCapacity>75000</DesignCapacity>
+      <FullChargeCapacity>66000</FullChargeCapacity>
+      <CycleCount>142</CycleCount>
+    </Battery>
+  </Batteries>
+</BatteryReport>

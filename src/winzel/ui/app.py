@@ -11,12 +11,14 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import DataTable, Footer, Header, Select, Static, TabbedContent, TabPane
+from textual_plotext import PlotextPlot
 
 from ..cli import ADMIN_WARNING, KIND_LABELS
 from ..config import use_emoji
 from ..context import Context
 from ..diff import Change, ChangeKind
 from ..models import Check
+from ..plots import launch as launch_plot
 from ..reference import (
     Reference,
     available_references,
@@ -26,12 +28,13 @@ from ..reference import (
 from ..snapshot import CheckOutcome, SnapshotReport, compare_snapshot, take_snapshot
 from ..status import format_date
 from ..store import Store
+from ..timeline import Timeline, build_timeline, draw_terminal_plot
 from .dialogs import ApproveDialog, ConfirmDialog, MilestoneDialog
 
 ALL = "all"
 PENDING_ONLY = "pending"
 PENDING = "⏳"
-TABS = ["overview", "changes"]
+TABS = ["overview", "changes", "timeline"]
 
 SnapshotFn = Callable[..., SnapshotReport]
 
@@ -74,6 +77,9 @@ class WinzelApp(App[None]):
     #filters #filter-reference { width: 44; }
     #reference-note { padding: 0 2; color: $text-muted; height: auto; }
     #changes-empty { padding: 1 2; color: $text-muted; }
+    #timeline-series { width: 50; margin: 0 1; }
+    #timeline-info { padding: 0 2; color: $text-muted; }
+    #timeline-plot { height: 1fr; min-height: 12; }
     """
     BINDINGS: ClassVar = [
         Binding("q", "quit", "Sair"),
@@ -81,6 +87,7 @@ class WinzelApp(App[None]):
         Binding("m", "milestone", "Novo milestone"),
         Binding("a", "approve", "Aprovar"),
         Binding("d", "delete_milestone", "Apagar milestone"),
+        Binding("p", "open_plot", "Abrir gráfico"),
         Binding("tab", "next_tab", "Trocar de aba", priority=True),
     ]
 
@@ -90,6 +97,7 @@ class WinzelApp(App[None]):
         ctx: Context,
         checks: list[Check],
         snapshot_fn: SnapshotFn = take_snapshot,
+        plot_launcher: Callable[..., object] = launch_plot,
     ) -> None:
         super().__init__()
         self.store = store
@@ -102,6 +110,8 @@ class WinzelApp(App[None]):
         self.shown_changes: list[Change] = []
         self.busy = False
         self._reference_value: str | None = None
+        self.plot_launcher = plot_launcher
+        self.timeline: Timeline | None = None
 
     # --- layout -------------------------------------------------------------
 
@@ -141,6 +151,13 @@ class WinzelApp(App[None]):
                 yield Static("", id="reference-note")
                 yield Static("", id="changes-empty")
                 yield DataTable(id="changes-table", zebra_stripes=True, cursor_type="row")
+            with TabPane("Linha do tempo", id="timeline"):
+                yield Select([], prompt="Série", id="timeline-series")
+                yield Static(
+                    "Linhas verticais: milestones · p: abrir o gráfico detalhado",
+                    id="timeline-info",
+                )
+                yield PlotextPlot(id="timeline-plot")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -199,6 +216,7 @@ class WinzelApp(App[None]):
         self._refresh_reference_selector()
         await self._render_overview()
         self.refresh_changes()
+        self.refresh_timeline()
 
     async def recompare(self, reference: Reference | None = None) -> None:
         """Compare the snapshot on screen with `reference` (default: the current one)."""
@@ -248,6 +266,9 @@ class WinzelApp(App[None]):
         self.query_one("#reference-note", Static).update(f"Nota: {note}" if note else "")
 
     async def on_select_changed(self, event: Select.Changed) -> None:
+        if event.select.id == "timeline-series":
+            self.draw_timeline()
+            return
         if event.select.id == "filter-reference":
             value = event.value
             if value == self._reference_value or value is Select.BLANK:
@@ -302,7 +323,46 @@ class WinzelApp(App[None]):
         row = table.cursor_row
         return self.shown_changes[row] if 0 <= row < len(self.shown_changes) else None
 
+    # --- Linha do tempo -------------------------------------------------------
+
+    def refresh_timeline(self) -> None:
+        self.timeline = build_timeline(self.store, self.checks)
+        select = self.query_one("#timeline-series", Select)
+        current = select.value
+        options = [(s.label, s.key) for s in self.timeline.series]
+        select.set_options(options)
+        keys = [key for _, key in options]
+        if keys:
+            select.value = current if current in keys else self.timeline.default_key()
+        self.draw_timeline()
+
+    def selected_series(self):
+        if self.timeline is None:
+            return None
+        value = self.query_one("#timeline-series", Select).value
+        return self.timeline.get(str(value)) if value is not Select.BLANK else None
+
+    def draw_timeline(self) -> None:
+        plot = self.query_one("#timeline-plot", PlotextPlot)
+        series = self.selected_series()
+        if series is None:
+            plot.plt.clear_figure()
+            plot.plt.title("Sem dados ainda")
+        else:
+            draw_terminal_plot(plot.plt, series, self.timeline.milestones)
+        plot.refresh()
+
     # --- actions ------------------------------------------------------------
+
+    def action_open_plot(self) -> None:
+        if not self._can_act():
+            return
+        series = self.selected_series()
+        if series is None or not series.points:
+            self.notify("Não há dados para o gráfico.", severity="warning")
+            return
+        self.plot_launcher(series, self.timeline.milestones)
+        self.notify(f"Gráfico aberto em outra janela: {series.label}.")
 
     def _can_act(self) -> bool:
         if self.busy or self.report is None:

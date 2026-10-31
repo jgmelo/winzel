@@ -53,3 +53,8 @@ def check_timeout(config: dict, check_id: str, default: float) -> float:
 
 def use_emoji(config: dict) -> bool:
     return bool(config.get("display", {}).get("emoji", True))
+
+
+def check_option(config: dict, check_id: str, key: str, default):
+    """A check's option from `[checks.<id>]`, or the default."""
+    return config.get("checks", {}).get(check_id, {}).get(key, default)

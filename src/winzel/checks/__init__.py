@@ -35,6 +35,11 @@ BUILTIN = [
     "services",
     "pip_global",
     "wsl_distros",
+    "disk_c",
+    "dev_drive",
+    "clutter",
+    "battery",
+    "ssd",
 ]
 
 

@@ -18,6 +18,11 @@ from winzel.snapshot import take_snapshot
 pytestmark = [pytest.mark.fase2, pytest.mark.diff]
 
 
+def checagens_do_inventario():
+    """As 7 checagens do inventário (as métricas da fase 4 ficam de fora)."""
+    return [c for c in all_checks() if c.area == "inventario"]
+
+
 class Maquina:
     """Uma máquina falsa com todas as checagens; o estado pode mudar entre snapshots."""
 
@@ -33,7 +38,7 @@ class Maquina:
 
     def snapshot(self):
         ctx = make_context(dict(self.respostas), clock=self.clock, is_admin=self.is_admin)
-        report = take_snapshot(self.banco, ctx, all_checks(), "auto")
+        report = take_snapshot(self.banco, ctx, checagens_do_inventario(), "auto")
         self.clock.advance(days=1)
         return {o.check_id: o for o in report.outcomes}
 

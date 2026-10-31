@@ -10,6 +10,7 @@ from typing import Any
 from winzel.commands import CommandResult
 from winzel.config import load_default_config
 from winzel.context import Context
+from winzel.filesystem import DirSize, DiskUsage
 
 DATA = Path(__file__).parent / "data"
 
@@ -66,6 +67,48 @@ def ok(stdout: bytes | str = b"", stderr: bytes = b"") -> CommandResult:
     return CommandResult(0, data, stderr)
 
 
+class FakeFileSystem:
+    """Drives, files and folders described by dicts; missing paths raise FileNotFoundError."""
+
+    def __init__(self) -> None:
+        self.disks: dict[str, DiskUsage] = {}
+        self.files: dict[str, int] = {}
+        self.dirs: dict[str, DirSize] = {}
+        self.texts: dict[str, str] = {}
+        self.env: dict[str, str] = {"TEMP": "C:\\Users\\jg\\AppData\\Local\\Temp"}
+        self.removed: list[str] = []
+
+    @staticmethod
+    def _get(table: dict, path: str):
+        for key, value in table.items():
+            if key.lower() == path.lower():
+                return value
+        raise FileNotFoundError(path)
+
+    def disk_usage(self, path: str) -> DiskUsage:
+        return self._get(self.disks, path)
+
+    def file_size(self, path: str) -> int:
+        return self._get(self.files, path)
+
+    def dir_size(self, path: str) -> DirSize:
+        return self._get(self.dirs, path)
+
+    def expand(self, path: str) -> str:
+        for name, value in self.env.items():
+            path = path.replace(f"%{name}%", value)
+        return path
+
+    def temp_path(self, name: str) -> str:
+        return f"C:\\Temp\\{name}"
+
+    def read_text(self, path: str) -> str:
+        return self._get(self.texts, path)
+
+    def remove(self, path: str) -> None:
+        self.removed.append(path)
+
+
 class FixedClock:
     """A clock stopped at a fixed moment; `advance` moves it forward."""
 
@@ -85,12 +128,14 @@ def make_context(
     is_admin: bool = False,
     config: dict | None = None,
     clock: FixedClock | None = None,
+    fs: FakeFileSystem | None = None,
 ) -> Context:
     """Context with fakes. `responses` maps a label to the answer, for PowerShell and commands."""
     responses = responses if responses is not None else {}
     return Context(
         powershell=FakePowerShell(responses),
         commands=FakeCommands(responses),
+        fs=fs if fs is not None else FakeFileSystem(),
         config=config if config is not None else load_default_config(),
         is_admin=is_admin,
         clock=clock or FixedClock(),

@@ -321,7 +321,7 @@ def test_tecla_r_grava_novo_snapshot_e_q_sai(banco):
 
 
 def test_tab_alterna_entre_as_abas(banco):
-    """Dado o winzel na Visão geral, quando pressiono Tab duas vezes, então volto à Visão geral."""
+    """Dado o winzel na Visão geral, quando pressiono Tab, então percorro as abas e volto."""
     app = WinzelApp(banco, make_context(respostas()), CHECKS)
 
     async def cenario():
@@ -330,6 +330,8 @@ def test_tab_alterna_entre_as_abas(banco):
             tabs = app.query_one("#tabs", TabbedContent)
             await pilot.press("tab")
             assert tabs.active == "changes"
+            await pilot.press("tab")
+            assert tabs.active == "timeline"
             await pilot.press("tab")
             assert tabs.active == "overview"
 

@@ -109,11 +109,11 @@ Valores numéricos ao longo do tempo.
 
 | ID | Checagem | Fonte | Status padrão | Admin | Fase |
 |---|---|---|---|---|---|
-| `disk_c` | Espaço livre no C: | `psutil` | 🟡 < 20% · 🔴 < 10% | Não | 4 |
-| `dev_drive` | Tamanho do VHDX e espaço livre no Dev Drive | Tamanho do arquivo + `psutil` | 🟡 < 20% livre | Não | 4 |
-| `clutter` | Tamanho das sandboxes e da pasta Temp | Tamanho das pastas | 🟡 > 5 GB | Não | 4 |
-| `battery` | Capacidade atual vs. de projeto | `powercfg /batteryreport /xml` | 🟡 < 80% · 🔴 < 60% | Pode exigir | 4 |
-| `ssd` | Desgaste e temperatura do SSD | `Get-StorageReliabilityCounter` | 🟡 desgaste > 50% | Sim | 4 |
+| `disk_c` | Espaço livre no C: | `psutil`; métricas `disk_c_free_pct`, `disk_c_free_gb`, `disk_c_total_gb` | 🟡 < 20% · 🔴 < 10% | Não | 4 |
+| `dev_drive` | Tamanho do VHDX e espaço livre no Dev Drive | `psutil` na letra (`D:`) + tamanho do arquivo VHDX: `checks.dev_drive.vhdx` ou, se vazio, descoberto pelo disco virtual que sustenta a letra (`Get-Partition \| Get-Disk`). Letra ausente → ⚪; VHDX não encontrado → só o espaço, com aviso no resumo | 🟡 < 20% livre | Não | 4 |
+| `clutter` | Tamanho das sandboxes e da pasta Temp | Soma dos arquivos de `C:\Sandbox` (lista configurável) e do `%TEMP%` do usuário (`C:\Windows\Temp` fica de fora). Pasta inexistente conta 0 GB e é citada; cada pasta aparece separada no resumo | 🟡 soma > 5 GB | Não | 4 |
+| `battery` | Capacidade atual vs. de projeto | `powercfg /batteryreport /xml /output` em arquivo temporário (apagado depois); também registra os ciclos. Sem bateria → ⚪ | 🟡 < 80% · 🔴 < 60% | Pode exigir | 4 |
+| `ssd` | Desgaste e temperatura do SSD | `Get-PhysicalDisk \| Get-StorageReliabilityCounter`, só SSD/NVMe (discos virtuais e USB ignorados); com vários, vale o pior desgaste e a maior temperatura. Sem dados → ⚪ | 🟡 desgaste > 50% | Sim | 4 |
 
 ### 5.3 Atualizações, segurança e backup
 
@@ -230,6 +230,7 @@ Objeto entregue a `run()` com tudo o que a checagem precisa do mundo externo:
 | Executor de comandos | Executa `pip`, `wsl` etc. (bytes, timeout, variáveis removidas do ambiente) | Falso que responde por rótulo |
 | Configuração | `default_config.toml` + `%APPDATA%\winzel\config.toml` | Configuração de teste |
 | `is_admin` | Detectado no início | Definido pelo teste |
+| Sistema de arquivos | Espaço em disco (`psutil`), tamanho de arquivos e pastas, variáveis de ambiente, arquivos temporários | Falso descrito por dicionários |
 | Relógio | Hora atual | Relógio parado em data fixa |
 
 As checagens nunca acessam o sistema, a configuração ou a hora diretamente; sempre pelo `Context`. Leituras de registro e de arquivos também passam por ele (via PowerShell ou por um leitor injetável).
@@ -297,7 +298,7 @@ Aplicação Textual, em português.
 |---|---|---|
 | **Visão geral** | 1 | Cartões por área com status e resumo de uma linha (ex.: "Programas 🟡 3 novos desde *linha de base*"). Topo: referência atual e data/hora do snapshot; aviso se o snapshot foi feito sem admin |
 | **Mudanças** | 1 (básica), 3 (completa) | Tabela: tipo (➕ adicionado, ➖ removido, 🔄 alterado), categoria, item, versão anterior → atual. Filtros por categoria e tipo. Fase 3: seletor de milestone de referência e aprovação de itens |
-| **Linha do tempo** | 4 | Minigráfico no terminal (`textual-plotext`) + gráfico detalhado no matplotlib, em processo separado, com milestones como linhas verticais rotuladas |
+| **Linha do tempo** | 4 | Seletor de série (cada métrica e a quantidade de itens de cada categoria do inventário; padrão: % livre no C:). Minigráfico no terminal (`textual-plotext`) + gráfico detalhado no matplotlib (`p`), em processo separado (`python -m winzel.plots`), com milestones como linhas verticais rotuladas. Snapshots em que a categoria não foi coletada ficam fora da série |
 | **Ações** | 5 | Lista fechada de ações (ex.: atualizar pacotes do winget, esvaziar sandboxes, criar milestone), cada uma com confirmação explícita |
 
 ### 8.3 Teclas

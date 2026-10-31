@@ -13,6 +13,12 @@ from winzel.ui.app import WinzelApp
 
 pytestmark = [pytest.mark.fase2, pytest.mark.interface]
 
+
+def checagens_do_inventario():
+    """As 7 checagens do inventário (as métricas da fase 4 ficam de fora)."""
+    return [c for c in all_checks() if c.area == "inventario"]
+
+
 ROTULOS = [
     "Programas",
     "Apps da Store",
@@ -26,7 +32,7 @@ ROTULOS = [
 
 def test_visao_geral_tem_um_cartao_por_categoria_e_filtro_com_todas(banco):
     """Dadas as 7 checagens, então a Visão geral tem 7 cartões e o filtro, as 7 categorias."""
-    app = WinzelApp(banco, make_context(all_responses()), all_checks())
+    app = WinzelApp(banco, make_context(all_responses()), checagens_do_inventario())
 
     async def cenario():
         async with app.run_test(size=(120, 50)) as pilot:
@@ -44,7 +50,7 @@ def test_resumo_sem_interface_lista_as_7_categorias(banco):
     """Dado `winzel snapshot` com todas as checagens, então o resumo tem uma linha por categoria."""
     saida = io.StringIO()
 
-    cmd_snapshot(banco, make_context(all_responses()), all_checks(), saida)
+    cmd_snapshot(banco, make_context(all_responses()), checagens_do_inventario(), saida)
 
     texto = saida.getvalue()
     for rotulo in ROTULOS:

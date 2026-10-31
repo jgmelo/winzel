@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "generated_at": "2026-10-31T20:36:44",
+  "parent_hash": "550ad1de982b2f80a4f9805ce96c149ecaea5834",
+  "parent_message": "feat: milestones, aprovações e retenção",
+  "branch": "main",
+  "duration_s": 22.892,
+  "totals": {
+    "passed": 344,
+    "failed": 0,
+    "skipped": 0,
+    "total": 344
+  },
+  "by_phase": {
+    "fase0": 40,
+    "fase1": 105,
+    "fase2": 74,
+    "fase3": 74,
+    "fase4": 51
+  },
+  "by_area": {
+    "aprovacoes": 13,
+    "armazenamento": 20,
+    "banco": 27,
+    "diff": 32,
+    "execucao": 33,
+    "hardware": 17,
+    "interface": 48,
+    "inventario": 90,
+    "milestones": 32,
+    "relatorio": 32
+  }
+}

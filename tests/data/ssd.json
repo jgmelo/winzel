@@ -1,0 +1,5 @@
+[
+  {"FriendlyName": "Micron 2400 NVMe 1TB", "MediaType": "SSD", "BusType": "NVMe", "Wear": 3, "Temperature": 41},
+  {"FriendlyName": "Msft Virtual Disk", "MediaType": "Unspecified", "BusType": "File Backed Virtual", "Wear": null, "Temperature": null},
+  {"FriendlyName": "Seagate Expansion HDD", "MediaType": "HDD", "BusType": "USB", "Wear": null, "Temperature": 30}
+]

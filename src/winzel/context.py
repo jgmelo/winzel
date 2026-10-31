@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from .commands import CommandRunner, Commands
+from .filesystem import FileSystem, RealFileSystem
 from .powershell import PowerShell, PowerShellRunner
 
 
@@ -16,6 +17,7 @@ from .powershell import PowerShell, PowerShellRunner
 class Context:
     powershell: PowerShellRunner
     commands: CommandRunner
+    fs: FileSystem
     config: dict
     is_admin: bool
     clock: Callable[[], datetime]
@@ -35,6 +37,7 @@ def production_context(config: dict) -> Context:
     return Context(
         powershell=PowerShell(),
         commands=Commands(),
+        fs=RealFileSystem(),
         config=config,
         is_admin=detect_is_admin(),
         clock=datetime.now,

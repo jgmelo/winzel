@@ -3,7 +3,8 @@
 Utilitário de terminal que **observa, registra e compara** o estado da instalação do
 Windows 11 ao longo do tempo. A especificação completa está em [`SPEC.md`](SPEC.md).
 
-**Estado atual:** fase 3 (inventário completo, milestones, aprovações e retenção). O painel de testes em
+**Estado atual:** fase 4 (inventário, milestones e aprovações, métricas de disco, bateria
+e SSD, e a aba Linha do tempo). O painel de testes em
 [`docs/testes/index.html`](docs/testes/index.html) mostra o que o winzel sabe fazer hoje.
 
 ## Uso
@@ -19,7 +20,11 @@ Windows 11 ao longo do tempo. A especificação completa está em [`SPEC.md`](SP
 
 Opções: `--db CAMINHO` (padrão `%LOCALAPPDATA%\winzel\winzel.db`) e `--config CAMINHO`
 (padrão `%APPDATA%\winzel\config.toml`). Teclas: `Tab` troca de aba, `r` atualiza, `m` cria milestone, `a` aprova (ou revoga) a
-mudança selecionada, `d` apaga o milestone escolhido como referência, `q` sai.
+mudança selecionada, `d` apaga o milestone escolhido como referência, `p` abre o gráfico
+detalhado da série escolhida na Linha do tempo, `q` sai.
+
+Caminhos e limites (letra e VHDX do Dev Drive, pastas de sandboxes, limites de status) ficam
+em `%APPDATA%\winzel\config.toml`; os padrões estão em `src/winzel/default_config.toml`.
 
 ## Ambiente de desenvolvimento (Windows)
 

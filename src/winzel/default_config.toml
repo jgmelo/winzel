@@ -35,3 +35,33 @@ timeout_s = 20
 # a um por mês. Manuais, milestones e suas referências nunca são apagados.
 [retention]
 keep_all_days = 90
+
+# --- Métricas (fase 4) ---------------------------------------------------------
+[checks.disk_c]
+timeout_s = 10
+path = "C:\\"
+warn_below_pct = 20
+problem_below_pct = 10
+
+[checks.dev_drive]
+timeout_s = 20
+letter = "D:"
+# Caminho do arquivo .vhdx do Dev Drive. Vazio: descoberto automaticamente.
+vhdx = ""
+warn_below_pct = 20
+
+[checks.clutter]
+timeout_s = 60
+sandboxes = ["C:\\Sandbox"]
+temp = "%TEMP%"
+# O limite vale para a soma de sandboxes e Temp.
+warn_above_gb = 5
+
+[checks.battery]
+timeout_s = 30
+warn_below_pct = 80
+problem_below_pct = 60
+
+[checks.ssd]
+timeout_s = 30
+warn_above_wear_pct = 50

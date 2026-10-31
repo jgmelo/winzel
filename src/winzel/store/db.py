@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from importlib import resources
 from pathlib import Path
 
-from ..models import CheckResult, Item, Status
+from ..models import CheckResult, Item, Metric, Status
 
 _MIGRATION_NAME = re.compile(r"^(\d{4})_[\w-]+\.sql$")
 
@@ -251,6 +251,39 @@ class Store:
             )
             for r in rows
         }
+
+    def metrics(self, snapshot_id: int, check_id: str | None = None) -> list[Metric]:
+        """Metrics of a snapshot; with `check_id`, only those whose name starts with it."""
+        rows = self.conn.execute(
+            "SELECT * FROM metrics WHERE snapshot_id = ? ORDER BY name", (snapshot_id,)
+        ).fetchall()
+        found = [Metric(r["name"], r["value"], r["unit"]) for r in rows]
+        if check_id is None:
+            return found
+        return [m for m in found if m.name.startswith(check_id + "_")]
+
+    # --- time line ------------------------------------------------------------
+
+    def item_counts(self) -> list[tuple[int, str, int]]:
+        """(snapshot_id, category, number of items) where the category was collected."""
+        rows = self.conn.execute(
+            """
+            SELECT c.snapshot_id, c.check_id, COUNT(i.key)
+            FROM check_runs c
+            LEFT JOIN items i ON i.snapshot_id = c.snapshot_id AND i.category = c.check_id
+            WHERE c.raw_status = 'ok'
+            GROUP BY c.snapshot_id, c.check_id
+            ORDER BY c.snapshot_id
+            """
+        ).fetchall()
+        return [(r[0], r[1], r[2]) for r in rows]
+
+    def metric_values(self) -> list[tuple[int, str, float, str]]:
+        """(snapshot_id, metric name, value, unit) for every stored metric."""
+        rows = self.conn.execute(
+            "SELECT snapshot_id, name, value, unit FROM metrics ORDER BY snapshot_id, name"
+        ).fetchall()
+        return [(r[0], r[1], r[2], r[3]) for r in rows]
 
     def previous_snapshot(self, snapshot_id: int) -> SnapshotInfo | None:
         row = self.conn.execute(
