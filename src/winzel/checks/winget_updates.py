@@ -43,10 +43,12 @@ def parse_updates(raw: Any) -> list[Item]:
     if raw.get("module_missing"):
         raise ModuleMissing(MODULE)
     items = []
+    seen: set[str] = set()
     for row in as_list(raw.get("packages")):
         package_id = as_text(row.get("Id"))
-        if not package_id:
+        if not package_id or package_id in seen:  # the same package can be listed twice
             continue
+        seen.add(package_id)
         installed, available = as_text(row.get("Installed")), as_text(row.get("Available"))
         items.append(
             Item(

@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "generated_at": "2026-10-31T21:34:16",
+  "parent_hash": "073a436ec7a1eb1bdabe20e5328a66d99bf46c9d",
+  "parent_message": "feat: atualizações, segurança, backup e aba Ações",
+  "branch": "main",
+  "duration_s": 40.237,
+  "totals": {
+    "passed": 398,
+    "failed": 0,
+    "skipped": 0,
+    "total": 398
+  },
+  "by_phase": {
+    "fase0": 40,
+    "fase1": 105,
+    "fase2": 74,
+    "fase3": 74,
+    "fase4": 51,
+    "fase5": 54
+  },
+  "by_area": {
+    "aprovacoes": 13,
+    "armazenamento": 20,
+    "atualizacoes": 10,
+    "backup": 12,
+    "banco": 27,
+    "diff": 32,
+    "execucao": 36,
+    "hardware": 17,
+    "interface": 68,
+    "inventario": 90,
+    "milestones": 32,
+    "relatorio": 32,
+    "seguranca": 9
+  }
+}

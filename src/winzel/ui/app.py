@@ -217,11 +217,20 @@ class WinzelApp(App[None]):
             f"{outcome.status.symbol(self.emoji)} {outcome.label} — {outcome.result.summary}"
         )
 
-    def _on_failure(self, exc: Exception) -> None:
+    async def _on_failure(self, exc: Exception) -> None:
+        """Show the error; if there is a stored snapshot, show it so the tabs stay usable."""
         self.busy = False
-        self.query_one("#progress-title", Static).update(
-            f"Falha ao gravar o snapshot: {exc}. Pressione r para tentar de novo."
-        )
+        message = f"Falha ao gravar o snapshot: {exc}. Pressione r para tentar de novo."
+        self.query_one("#progress-title", Static).update(message)
+        latest = self.store.latest_snapshot()
+        if latest is None:
+            return
+        self.reference = self.reference or default_reference(self.store)
+        report = compare_snapshot(self.store, self.checks, latest, self.reference)
+        await self._show_snapshot_report(report)
+        self.query_one("#progress").display = False
+        self.query_one("#tabs").display = True
+        self.notify(f"{message} Exibindo o snapshot #{latest.id}.", severity="error", timeout=15)
 
     async def _show_report(self, report: SnapshotReport) -> None:
         self.busy = False

@@ -29,20 +29,25 @@ ConvertTo-Json -InputObject @($result) -Depth 3 -Compress
 
 
 def parse_pending(raw: Any) -> list[Item]:
-    items = []
+    """One item per update. The same KB can cover several updates (e.g. one per product),
+    so the key is "KB|title"; exact repetitions are listed once."""
+    items: dict[str, Item] = {}
     for row in as_list(raw):
         title = as_text(row.get("Title"))
         if not title:
             continue
-        items.append(
+        kb = as_text(row.get("KB"))
+        key = f"{kb}|{title}" if kb else title
+        items.setdefault(
+            key,
             Item(
                 category=CATEGORY,
-                key=as_text(row.get("KB")) or title,
+                key=key,
                 version=None,
-                details={"name": title, "severity": as_text(row.get("Severity"))},
-            )
+                details={"name": title, "kb": kb, "severity": as_text(row.get("Severity"))},
+            ),
         )
-    return items
+    return list(items.values())
 
 
 class WindowsUpdateCheck:

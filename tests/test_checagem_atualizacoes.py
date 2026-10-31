@@ -79,7 +79,7 @@ def test_atualizacoes_pendentes_do_windows_deixam_amarelo():
 
     assert resultado.status is Status.WARN
     assert resultado.summary == "2 pendentes: Atualização cumulativa 2026-11 (KB5050001) e mais 1"
-    assert [i.key for i in resultado.items] == ["KB5050001", "KB2267602"]
+    assert [i.details["kb"] for i in resultado.items] == ["KB5050001", "KB2267602"]
 
 
 def test_sem_atualizacoes_pendentes_do_windows_fica_verde():
@@ -96,3 +96,24 @@ def test_busca_do_windows_update_tem_timeout_proprio_maior():
     WindowsUpdateCheck().run(ctx)
 
     assert ctx.powershell.calls[0]["timeout_s"] == 120
+
+
+def test_mesmo_kb_em_duas_atualizacoes_vira_dois_itens_distintos():
+    """Dado o mesmo KB em duas atualizações (um por produto), então há dois itens, sem colisão."""
+    pendentes = [
+        {"Title": ".NET 8.0.11 para x64 (KB5050002)", "KB": "KB5050002"},
+        {"Title": ".NET 8.0.11 para ARM64 (KB5050002)", "KB": "KB5050002"},
+        {"Title": ".NET 8.0.11 para x64 (KB5050002)", "KB": "KB5050002"},
+    ]
+
+    resultado = WindowsUpdateCheck().run(make_context({"windows_update": pendentes}))
+
+    chaves = [i.key for i in resultado.items]
+    assert len(chaves) == len(set(chaves)) == 2
+
+
+def test_mesmo_pacote_listado_duas_vezes_pelo_winget_vira_um_item():
+    """Dado o mesmo Id duas vezes na lista do winget, então ele aparece uma só vez."""
+    repetido = {"packages": PACOTES["packages"] + [PACOTES["packages"][0]]}
+
+    assert [i.key for i in parse_updates(repetido)] == ["Git.Git", "Obsidian.Obsidian"]

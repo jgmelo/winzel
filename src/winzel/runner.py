@@ -35,10 +35,25 @@ def failed(check: Check, message: str, duration_ms: int) -> CheckResult:
     )
 
 
+def duplicate_keys(result: CheckResult) -> list[str]:
+    """Item keys that appear more than once (they would make the snapshot unsavable)."""
+    seen: set[tuple[str, str]] = set()
+    duplicates: list[str] = []
+    for item in result.items:
+        key = (item.category, item.key)
+        if key in seen and item.key not in duplicates:
+            duplicates.append(item.key)
+        seen.add(key)
+    return duplicates
+
+
 def _run_one(check: Check, ctx: Context) -> CheckResult:
     started = time.perf_counter()
     try:
         result = check.run(ctx)
+        duplicates = duplicate_keys(result)
+        if duplicates:
+            raise ValueError(f"chaves duplicadas: {', '.join(duplicates[:3])}")
     except Exception as exc:  # any failure in a check becomes an ERROR result
         message = str(exc) or type(exc).__name__
         return failed(check, message, int((time.perf_counter() - started) * 1000))
