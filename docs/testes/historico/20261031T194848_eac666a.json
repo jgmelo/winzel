@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "generated_at": "2026-10-31T19:48:48",
+  "parent_hash": "eac666a3263003e8ae35bca47050e1883f07406f",
+  "parent_message": "feat: MVP com programas, inicialização e linha de base",
+  "branch": "main",
+  "duration_s": 8.183,
+  "totals": {
+    "passed": 219,
+    "failed": 0,
+    "skipped": 0,
+    "total": 219
+  },
+  "by_phase": {
+    "fase0": 40,
+    "fase1": 105,
+    "fase2": 74
+  },
+  "by_area": {
+    "banco": 12,
+    "diff": 32,
+    "execucao": 33,
+    "interface": 20,
+    "inventario": 90,
+    "relatorio": 32
+  }
+}

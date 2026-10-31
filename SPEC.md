@@ -86,11 +86,11 @@ Gera itens comparáveis entre snapshots. Cada item tem **chave** estável e **ve
 |---|---|---|---|---|---|---|
 | `programs` | Programas instalados | Registro `...\CurrentVersion\Uninstall` em HKLM (64 bits e `WOW6432Node`) e HKCU; ignora entradas sem `DisplayName` ou com `SystemComponent = 1`; o mesmo programa em mais de uma fonte vira um item só (com a lista de fontes) | `nome normalizado\|fabricante` (seção 12, risco 1) | `DisplayVersion` | Não | 1 |
 | `startup` | Inicialização | Chaves `Run`/`RunOnce` (HKCU, HKLM, 32 bits) e pastas Startup (usuário e comum); estado via `...\Explorer\StartupApproved` | `nome\|local` | comando + ligado/desligado | Não | 1 |
-| `store_apps` | Apps da Store | `Get-AppxPackage`, sem frameworks nem apps de sistema | nome do pacote | versão | Não | 2 |
-| `scheduled_tasks` | Tarefas agendadas de terceiros | `Get-ScheduledTask`, fora de `\Microsoft\` | `caminho\|nome` | ação + estado | Não | 2 |
-| `services` | Serviços de terceiros | `Get-CimInstance Win32_Service`, com executável (`PathName`) fora de `C:\Windows` | nome do serviço | executável + modo de início | Não | 2 |
-| `pip_global` | Pacotes do Python global | `python -m pip list --format=json` (Python global) | pacote | versão | Não | 2 |
-| `wsl_distros` | Distribuições WSL | `wsl -l -v` | nome | versão do WSL | Não | 2 |
+| `store_apps` | Apps da Store | `Get-AppxPackage` do usuário atual, sem frameworks, pacotes de recurso nem apps com `SignatureKind = System`; o mesmo pacote em mais de uma arquitetura vira um item só | nome do pacote (`Name`) | versão | Não | 2 |
+| `scheduled_tasks` | Tarefas agendadas de terceiros | `Get-ScheduledTask`, fora de `\Microsoft\` | `caminho\|nome` | ações (executável + argumentos, ou `COM {ClassId}`) + habilitada/desabilitada. O estado ao vivo (`Running`/`Ready`) não conta | Não | 2 |
+| `services` | Serviços de terceiros | `Get-CimInstance Win32_Service`, com executável (`PathName`, sem aspas nem argumentos, com `%SystemRoot%` expandido, sem diferenciar maiúsculas) fora de `C:\Windows`; serviços sem `PathName` ficam de fora | nome do serviço (minúsculas) | modo de início (automático, automático (atrasado), manual, desativado) + executável. O estado (rodando/parado) não conta | Não | 2 |
+| `pip_global` | Pacotes do Python global | `python -m pip list --format=json` no Python global: `checks.pip_global.python` do `config.toml` (caminho ou lista) ou, por padrão, `py -3.14`, sempre sem `VIRTUAL_ENV` no ambiente. Antes, o interpretador informa seu caminho e se é um venv (venv → ❗; Python não encontrado → ⚪). O caminho aparece no resumo | pacote (nome PEP 503) | versão | Não | 2 |
+| `wsl_distros` | Distribuições WSL | `wsl -l -v` (UTF-16 LE; colunas lidas pela posição, pois o cabeçalho é traduzido). WSL não instalado ou sem distros → 🟢 com 0 itens; outro erro → ❗ | nome (minúsculas) | versão do WSL (1/2). Estado e distro padrão não contam | Não | 2 |
 
 **Status do inventário:** 🟢 sem mudanças não aprovadas desde o milestone de referência; 🟡 com mudanças não aprovadas. Em `pip_global`, qualquer pacote além do `pip` resulta em 🟡.
 
@@ -99,6 +99,9 @@ Gera itens comparáveis entre snapshots. Cada item tem **chave** estável e **ve
 - `programs`: programas portáteis não aparecem; entradas órfãs aparecem.
 - `services`: serviços de terceiros em `System32` escapam do filtro; serviços da Microsoft fora de `C:\Windows` aparecem (aprováveis). Drivers de kernel ficam fora do escopo.
 - Um mesmo programa pode aparecer em `programs` e em `store_apps` (instalado pelos dois meios).
+- `scheduled_tasks`: sem elevação, o Windows esconde algumas tarefas. Por isso, essa categoria só é comparada com uma linha de base feita com a **mesma elevação**; com elevação diferente, fica ⚪ "não comparada" (os itens são gravados).
+- `services`: executável sem `.exe` e sem aspas (ex.: Docker) é guardado com a linha de comando inteira, pois não dá para separar argumentos de espaços no caminho.
+- `wsl_distros`: o aviso de "nenhuma distribuição" é reconhecido pelo código `WSL_E_DEFAULT_DISTRO_NOT_FOUND` ou pela frase em português/inglês.
 
 ### 5.2 Métricas
 
@@ -220,6 +223,7 @@ Objeto entregue a `run()` com tudo o que a checagem precisa do mundo externo:
 | Campo | Produção | Testes |
 |---|---|---|
 | Executor do PowerShell | Executa `powershell.exe` (UTF-8, JSON, timeout) | Falso que devolve JSONs de `tests/data/` |
+| Executor de comandos | Executa `pip`, `wsl` etc. (bytes, timeout, variáveis removidas do ambiente) | Falso que responde por rótulo |
 | Configuração | `default_config.toml` + `%APPDATA%\winzel\config.toml` | Configuração de teste |
 | `is_admin` | Detectado no início | Definido pelo teste |
 | Relógio | Hora atual | Relógio parado em data fixa |

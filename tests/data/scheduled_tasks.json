@@ -1,0 +1,8 @@
+[
+  {"TaskPath": "\\", "TaskName": "OneDrive Standalone Update Task-S-1-5-21-1111", "State": "Ready", "Actions": [{"Execute": "%localappdata%\\Microsoft\\OneDrive\\OneDriveStandaloneUpdater.exe", "Arguments": null, "ClassId": null}]},
+  {"TaskPath": "\\", "TaskName": "GoogleUpdateTaskMachineCore", "State": "Disabled", "Actions": [{"Execute": "C:\\Program Files (x86)\\Google\\Update\\GoogleUpdate.exe", "Arguments": "/c", "ClassId": null}]},
+  {"TaskPath": "\\Mozilla\\", "TaskName": "Firefox Background Update", "State": "Running", "Actions": {"Execute": "C:\\Program Files\\Mozilla Firefox\\firefox.exe", "Arguments": "--backgroundtask backgroundupdate", "ClassId": null}},
+  {"TaskPath": "\\Contoso\\", "TaskName": "Manutencao", "State": "Ready", "Actions": [{"Execute": "C:\\Contoso\\limpa.exe", "Arguments": "/tmp", "ClassId": null}, {"Execute": "C:\\Contoso\\relata.exe", "Arguments": null, "ClassId": null}]},
+  {"TaskPath": "\\Contoso\\", "TaskName": "Gatilho COM", "State": "Ready", "Actions": [{"Execute": null, "Arguments": null, "ClassId": "{A0B1C2D3-0000-0000-0000-000000000000}"}]},
+  {"TaskPath": "\\Microsoft\\Windows\\Defrag\\", "TaskName": "ScheduledDefrag", "State": "Ready", "Actions": [{"Execute": "%windir%\\system32\\defrag.exe", "Arguments": "-c -h -o", "ClassId": null}]}
+]

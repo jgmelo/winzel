@@ -8,12 +8,14 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
+from .commands import CommandRunner, Commands
 from .powershell import PowerShell, PowerShellRunner
 
 
 @dataclass
 class Context:
     powershell: PowerShellRunner
+    commands: CommandRunner
     config: dict
     is_admin: bool
     clock: Callable[[], datetime]
@@ -32,6 +34,7 @@ def detect_is_admin() -> bool:
 def production_context(config: dict) -> Context:
     return Context(
         powershell=PowerShell(),
+        commands=Commands(),
         config=config,
         is_admin=detect_is_admin(),
         clock=datetime.now,

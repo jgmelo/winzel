@@ -49,7 +49,7 @@ class WinzelApp(App[None]):
     #progress-title { text-style: bold; margin-bottom: 1; }
     #overview-header { padding: 0 1; margin-bottom: 1; }
     #admin-warning { padding: 0 1; color: $warning; margin-bottom: 1; }
-    .card { border: round $panel-lighten-2; padding: 0 1; margin: 0 1 1 1; height: auto; }
+    .card { border: round $panel-lighten-2; padding: 0 1; margin: 0 1; height: auto; }
     .card.status-warn { border: round $warning; }
     .card.status-problem, .card.status-error { border: round $error; }
     #filters { height: auto; padding: 0 1; }
@@ -91,9 +91,7 @@ class WinzelApp(App[None]):
                 yield VerticalScroll(id="overview-body")
             with TabPane("Mudanças", id="changes"):
                 with Horizontal(id="filters"):
-                    categories = [("Todas as categorias", ALL)] + [
-                        (c.label, c.id) for c in self.checks if c.area == "inventario"
-                    ]
+                    categories = self.category_options()
                     kinds = [("Todos os tipos", ALL)] + [
                         (f"{k.symbol} {k.label.capitalize()}s", k.value) for k in ChangeKind
                     ]
@@ -102,6 +100,12 @@ class WinzelApp(App[None]):
                 yield Static("", id="changes-empty")
                 yield DataTable(id="changes-table", zebra_stripes=True, cursor_type="row")
         yield Footer()
+
+    def category_options(self) -> list[tuple[str, str]]:
+        """Options of the category filter: all, then each inventory check."""
+        return [("Todas as categorias", ALL)] + [
+            (c.label, c.id) for c in self.checks if c.area == "inventario"
+        ]
 
     def on_mount(self) -> None:
         table = self.query_one("#changes-table", DataTable)

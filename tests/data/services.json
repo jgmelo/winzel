@@ -1,0 +1,10 @@
+[
+  {"Name": "Spooler", "DisplayName": "Spooler de Impressão", "PathName": "%SystemRoot%\\System32\\spoolsv.exe", "StartMode": "Auto", "DelayedAutoStart": false, "State": "Running"},
+  {"Name": "wuauserv", "DisplayName": "Windows Update", "PathName": "C:\\WINDOWS\\system32\\svchost.exe -k netsvcs -p", "StartMode": "Manual", "DelayedAutoStart": false, "State": "Running"},
+  {"Name": "NVDisplay.ContainerLocalSystem", "DisplayName": "NVIDIA Display Container LS", "PathName": "\"C:\\Windows\\System32\\DriverStore\\FileRepository\\nv_dispi.inf_amd64\\Display.NvContainer\\NVDisplay.Container.exe\" -s NVDisplay.ContainerLocalSystem", "StartMode": "Auto", "DelayedAutoStart": false, "State": "Running"},
+  {"Name": "edgeupdate", "DisplayName": "Microsoft Edge Update Service (edgeupdate)", "PathName": "\"C:\\Program Files (x86)\\Microsoft\\EdgeUpdate\\MicrosoftEdgeUpdate.exe\" /svc", "StartMode": "Auto", "DelayedAutoStart": true, "State": "Stopped"},
+  {"Name": "Steam Client Service", "DisplayName": "Steam Client Service", "PathName": "\"C:\\Program Files (x86)\\Common Files\\Steam\\steamservice.exe\" /RunAsService", "StartMode": "Manual", "DelayedAutoStart": false, "State": "Stopped"},
+  {"Name": "com.docker.service", "DisplayName": "Docker Desktop Service", "PathName": "C:\\Program Files\\Docker\\Docker\\com.docker.service", "StartMode": "Manual", "DelayedAutoStart": false, "State": "Stopped"},
+  {"Name": "LogiOptions", "DisplayName": "Logitech Options", "PathName": "C:\\Program Files\\Logitech\\LogiOptions\\LogiOptionsMgr.exe /service", "StartMode": "Disabled", "DelayedAutoStart": false, "State": "Stopped"},
+  {"Name": "FantasmaSemCaminho", "DisplayName": "Sem caminho", "PathName": null, "StartMode": "Manual", "DelayedAutoStart": false, "State": "Stopped"}
+]

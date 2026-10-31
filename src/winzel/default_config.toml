@@ -12,3 +12,21 @@ timeout_s = 30
 
 [checks.startup]
 timeout_s = 30
+
+[checks.store_apps]
+timeout_s = 30
+
+[checks.scheduled_tasks]
+timeout_s = 30
+
+[checks.services]
+timeout_s = 30
+
+[checks.pip_global]
+timeout_s = 30
+# Python global (fora de venvs). Vazio: launcher `py -3.14`.
+# Aceita um caminho ("C:\\Python314\\python.exe") ou uma lista (["py", "-3.13"]).
+python = ""
+
+[checks.wsl_distros]
+timeout_s = 20

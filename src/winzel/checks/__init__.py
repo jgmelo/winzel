@@ -15,8 +15,10 @@ def register(check: Check) -> Check:
 
 
 def all_checks() -> list[Check]:
+    """Registered checks: built-in ones in BUILTIN order, then any others."""
     _load_builtin()
-    return list(_REGISTRY.values())
+    order = {name: i for i, name in enumerate(BUILTIN)}
+    return sorted(_REGISTRY.values(), key=lambda c: order.get(c.id, len(order)))
 
 
 def get_check(check_id: str) -> Check:
@@ -24,5 +26,20 @@ def get_check(check_id: str) -> Check:
     return _REGISTRY[check_id]
 
 
+# Display order: as listed here.
+BUILTIN = [
+    "programs",
+    "store_apps",
+    "startup",
+    "scheduled_tasks",
+    "services",
+    "pip_global",
+    "wsl_distros",
+]
+
+
 def _load_builtin() -> None:
-    from . import programs, startup  # noqa: F401  (modules register themselves)
+    from importlib import import_module
+
+    for name in BUILTIN:  # modules register themselves on import
+        import_module(f"{__name__}.{name}")

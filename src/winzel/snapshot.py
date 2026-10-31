@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 from .context import Context
 from .diff import Change, diff_items
-from .models import Check, CheckResult, Status, worst
+from .models import Check, CheckResult, Item, Status, worst
 from .runner import run_checks
 from .status import inventory_status, inventory_summary
 from .store import SnapshotInfo, Store
@@ -54,27 +54,50 @@ class SnapshotReport:
 OutcomeCallback = Callable[[CheckOutcome], None]
 
 
-def analyse(store: Store, check: Check, result: CheckResult) -> CheckOutcome:
+def own_status(check: Check, items: list[Item]) -> Status:
+    """A check may add its own rule (e.g. pip_global: 🟡 with any package besides pip)."""
+    rule = getattr(check, "status_rule", None)
+    return rule(items) if rule is not None else Status.OK
+
+
+def elevation_text(is_admin: bool) -> str:
+    return "com admin" if is_admin else "sem admin"
+
+
+def analyse(store: Store, check: Check, result: CheckResult, is_admin: bool) -> CheckOutcome:
     """Compare an inventory result with its category baseline and set status/summary.
 
     A check that was skipped or failed is not compared: its items are unknown, which
-    is different from "the items disappeared".
+    is different from "the items disappeared". A check marked `same_elevation_only`
+    is not compared with a baseline taken with a different elevation (⚪).
     """
     outcome = CheckOutcome(check.id, check.label, check.area, result)
     if check.area != INVENTORY_AREA or result.status.is_failure:
         return outcome
+    reference = store.baseline_for(check.id)
+    if (
+        reference is not None
+        and getattr(check, "same_elevation_only", False)
+        and reference.is_admin != is_admin
+    ):
+        outcome.reference = reference
+        result.status = Status.SKIPPED
+        result.summary = (
+            f"{result.summary} — não comparada: linha de base feita "
+            f"{elevation_text(reference.is_admin)}, este snapshot {elevation_text(is_admin)}"
+        )
+        return outcome
     outcome.comparable = True
-    outcome.reference = store.baseline_for(check.id)
-    if outcome.reference is None:
-        result.status = Status.OK
+    outcome.reference = reference
+    extra = own_status(check, result.items)
+    if reference is None:
+        result.status = extra
         result.summary = inventory_summary([], result.summary, None)
         return outcome
-    reference_items = store.items(outcome.reference.id, check.id)
+    reference_items = store.items(reference.id, check.id)
     outcome.changes = diff_items(reference_items, {i.key: i for i in result.items})
-    result.status = inventory_status(outcome.changes)
-    result.summary = inventory_summary(
-        outcome.changes, result.summary, outcome.reference.created_at
-    )
+    result.status = worst([inventory_status(outcome.changes), extra])
+    result.summary = inventory_summary(outcome.changes, result.summary, reference.created_at)
     return outcome
 
 
@@ -90,7 +113,7 @@ def take_snapshot(
     outcomes: dict[str, CheckOutcome] = {}
 
     def progress(result: CheckResult) -> None:
-        outcome = analyse(store, by_id[result.check_id], result)
+        outcome = analyse(store, by_id[result.check_id], result, ctx.is_admin)
         outcomes[result.check_id] = outcome
         if on_progress is not None:
             on_progress(outcome)

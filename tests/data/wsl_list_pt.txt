@@ -1,0 +1,2 @@
+  NOME            ESTADO          VERSÃO
+* Ubuntu-24.04    Parado          2
