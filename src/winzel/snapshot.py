@@ -76,6 +76,12 @@ def own_status(check: Check, items: list[Item]) -> Status:
     return rule(items) if rule is not None else Status.OK
 
 
+def ignored_keys(check: Check, config: dict) -> set[str]:
+    """Keys the user asked to ignore for this check (`[checks.<id>] ignore`), lowercase."""
+    values = config.get("checks", {}).get(check.id, {}).get("ignore", [])
+    return {str(v).lower() for v in values}
+
+
 def elevation_text(is_admin: bool) -> str:
     return "com admin" if is_admin else "sem admin"
 
@@ -88,6 +94,7 @@ def analyse(
     reference: Reference | None = None,
     current_id: int | None = None,
     approvals: dict | None = None,
+    config: dict | None = None,
 ) -> CheckOutcome:
     """Compare an inventory result with its reference and set the final status/summary.
 
@@ -139,7 +146,13 @@ def analyse(
         changes: list[Change] = []
     else:
         reference_items = store.items(effective.id, check.id)
-        changes = diff_items(reference_items, {i.key: i for i in result.items})
+        ignored = ignored_keys(check, config or {})
+        if ignored:  # items ignored now also leave the reference (no false "removed")
+            reference_items = {k: v for k, v in reference_items.items() if k.lower() not in ignored}
+            current = [i for i in result.items if i.key.lower() not in ignored]
+        else:
+            current = result.items
+        changes = diff_items(reference_items, {i.key: i for i in current})
     outcome.changes = apply_approvals(changes, approvals or {})
     result.status = worst([inventory_status(outcome.changes), extra])
     result.summary = inventory_summary(outcome.changes, base, reference.since(effective))
@@ -163,7 +176,9 @@ def take_snapshot(
 
     def progress(result: CheckResult) -> None:
         check = by_id[result.check_id]
-        outcome = analyse(store, check, result, ctx.is_admin, reference, None, approvals)
+        outcome = analyse(
+            store, check, result, ctx.is_admin, reference, None, approvals, ctx.config
+        )
         outcomes[result.check_id] = outcome
         if on_progress is not None:
             on_progress(outcome)
@@ -182,6 +197,7 @@ def compare_snapshot(
     checks: list[Check],
     snapshot: SnapshotInfo,
     reference: Reference | None,
+    config: dict | None = None,
 ) -> SnapshotReport:
     """Compare a stored snapshot with another reference, without running the checks."""
     runs = store.check_runs(snapshot.id)
@@ -213,6 +229,8 @@ def compare_snapshot(
             duration_ms=run.duration_ms,
         )
         outcomes.append(
-            analyse(store, check, result, snapshot.is_admin, reference, snapshot.id, approvals)
+            analyse(
+                store, check, result, snapshot.is_admin, reference, snapshot.id, approvals, config
+            )
         )
     return SnapshotReport(snapshot=snapshot, outcomes=outcomes, reference=reference)

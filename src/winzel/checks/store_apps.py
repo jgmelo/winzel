@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..config import check_timeout
+from ..config import check_option, check_timeout
 from ..context import Context
 from ..models import CheckResult, Item, Status
 from . import register
@@ -41,11 +41,13 @@ def is_user_app(row: dict) -> bool:
     return as_text(row.get("SignatureKind")).lower() != "system"
 
 
-def parse_store_apps(raw: Any) -> list[Item]:
+def parse_store_apps(raw: Any, ignore: list[str] | tuple[str, ...] = ()) -> list[Item]:
+    """`ignore`: package names left out (case-insensitive), e.g. Microsoft.Winget.Source."""
+    ignored = {n.lower() for n in ignore}
     items: dict[str, Item] = {}
     for row in as_list(raw):
         name = as_text(row.get("Name"))
-        if not name or not is_user_app(row):
+        if not name or not is_user_app(row) or name.lower() in ignored:
             continue
         arch = as_text(row.get("Architecture"))
         if name in items:  # same package installed for more than one architecture
@@ -76,7 +78,7 @@ class StoreAppsCheck:
     def run(self, ctx: Context) -> CheckResult:
         timeout_s = check_timeout(ctx.config, self.id, self.timeout_s)
         raw = ctx.powershell.run_json(SCRIPT, label=self.id, timeout_s=timeout_s)
-        items = parse_store_apps(raw)
+        items = parse_store_apps(raw, check_option(ctx.config, self.id, "ignore", []))
         return CheckResult(
             check_id=self.id,
             status=Status.OK,

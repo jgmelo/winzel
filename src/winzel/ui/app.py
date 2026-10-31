@@ -226,7 +226,7 @@ class WinzelApp(App[None]):
         if latest is None:
             return
         self.reference = self.reference or default_reference(self.store)
-        report = compare_snapshot(self.store, self.checks, latest, self.reference)
+        report = compare_snapshot(self.store, self.checks, latest, self.reference, self.ctx.config)
         await self._show_snapshot_report(report)
         self.query_one("#progress").display = False
         self.query_one("#tabs").display = True
@@ -253,7 +253,9 @@ class WinzelApp(App[None]):
             return
         if reference is not None:
             self.reference = reference
-        report = compare_snapshot(self.store, self.checks, self.report.snapshot, self.reference)
+        report = compare_snapshot(
+            self.store, self.checks, self.report.snapshot, self.reference, self.ctx.config
+        )
         await self._show_snapshot_report(report)
 
     # --- Visão geral --------------------------------------------------------

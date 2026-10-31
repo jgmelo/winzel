@@ -15,6 +15,9 @@ timeout_s = 30
 
 [checks.store_apps]
 timeout_s = 30
+# Pacotes que não são aplicativos e mudam o tempo todo (ex.: o índice de pacotes
+# do winget, atualizado várias vezes por dia). Nomes sem diferenciar maiúsculas.
+ignore = ["Microsoft.Winget.Source"]
 
 [checks.scheduled_tasks]
 timeout_s = 30

@@ -83,3 +83,66 @@ def test_saida_com_um_unico_app_em_objeto_e_aceita():
     um = sample("store_apps")[0]
 
     assert nomes(parse_store_apps(um)) == ["Microsoft.WindowsTerminal"]
+
+
+def test_indice_do_winget_e_ignorado_por_padrao():
+    """Dado o Microsoft.Winget.Source (índice do winget, não um app), então ele fica de fora."""
+    indice = {
+        "Name": "Microsoft.Winget.Source",
+        "Version": "2026.1031.2154.1",
+        "Architecture": "Neutral",
+        "IsFramework": False,
+        "IsResourcePackage": False,
+        "SignatureKind": "Store",
+    }
+    ctx = make_context({"store_apps": [*sample("store_apps"), indice]})
+
+    resultado = StoreAppsCheck().run(ctx)
+
+    assert "Microsoft.Winget.Source" not in nomes(resultado.items)
+    assert resultado.summary == "3 apps"
+
+
+def test_lista_de_ignorados_vem_do_config_sem_diferenciar_maiusculas():
+    """Dado ignore = ["spotifyab.spotifymusic"] no config, então o Spotify fica de fora."""
+    config = {"checks": {"store_apps": {"ignore": ["spotifyab.spotifymusic"]}}}
+
+    resultado = StoreAppsCheck().run(
+        make_context({"store_apps": sample("store_apps")}, config=config)
+    )
+
+    assert nomes(resultado.items) == ["Contoso.Ferramenta", "Microsoft.WindowsTerminal"]
+
+
+def test_ignorar_um_pacote_que_ja_estava_na_linha_de_base_nao_gera_removido(banco):
+    """Dada uma linha de base com o índice do winget, quando ele passa a ser ignorado, nada muda."""
+    from winzel.checks import get_check
+    from winzel.config import load_default_config
+    from winzel.snapshot import take_snapshot
+
+    indice = {
+        "Name": "Microsoft.Winget.Source",
+        "Version": "2026.1031.304.59",
+        "SignatureKind": "Store",
+    }
+    antes = {"checks": {"store_apps": {"ignore": []}}}
+    take_snapshot(
+        banco,
+        make_context({"store_apps": [*sample("store_apps"), indice]}, config=antes),
+        [get_check("store_apps")],
+        "auto",
+    )
+    indice_novo = {**indice, "Version": "2026.1031.2154.1"}
+
+    report = take_snapshot(
+        banco,
+        make_context(
+            {"store_apps": [*sample("store_apps"), indice_novo]}, config=load_default_config()
+        ),
+        [get_check("store_apps")],
+        "auto",
+    )
+
+    (resultado,) = report.outcomes
+    assert resultado.changes == []
+    assert resultado.status is Status.OK
