@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "generated_at": "2026-10-31T19:18:29",
+  "parent_hash": "f8e0d9fdebba88fb62cbbd9a0438ca0f39e155c7",
+  "parent_message": "fix: saída UTF-8 no pre-commit e nos testes do hook (Windows)",
+  "branch": "main",
+  "duration_s": 8.787,
+  "totals": {
+    "passed": 145,
+    "failed": 0,
+    "skipped": 0,
+    "total": 145
+  },
+  "by_phase": {
+    "fase0": 40,
+    "fase1": 105
+  },
+  "by_area": {
+    "banco": 12,
+    "diff": 18,
+    "execucao": 28,
+    "interface": 18,
+    "inventario": 37,
+    "relatorio": 32
+  }
+}

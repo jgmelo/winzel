@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {"Location": "hkcu_run", "Name": "OneDrive", "Command": "\"C:\\Users\\jg\\AppData\\Local\\Microsoft\\OneDrive\\OneDrive.exe\" /background"},
+    {"Location": "hkcu_run", "Name": "Spotify", "Command": "C:\\Users\\jg\\AppData\\Roaming\\Spotify\\Spotify.exe --autostart"},
+    {"Location": "hkcu_runonce", "Name": "LimpezaPosInstalacao", "Command": "C:\\Temp\\cleanup.cmd"},
+    {"Location": "hklm_run", "Name": "SecurityHealth", "Command": "%windir%\\system32\\SecurityHealthSystray.exe"},
+    {"Location": "hklm32_run", "Name": "Logitech Download Assistant", "Command": "C:\\Windows\\SysWOW64\\rundll32.exe C:\\Windows\\SysWOW64\\LogiLDA.dll,LogiFetch"},
+    {"Location": "startup_user", "Name": "Send to OneNote.lnk", "Command": "C:\\Program Files\\Microsoft Office\\root\\Office16\\ONENOTEM.EXE /tsr"},
+    {"Location": "startup_common", "Name": "Bginfo.lnk", "Command": "C:\\Tools\\Bginfo64.exe /timer:0"}
+  ],
+  "approved": [
+    {"Hive": "HKCU", "List": "Run", "Name": "OneDrive", "Flag": 2},
+    {"Hive": "HKCU", "List": "Run", "Name": "Spotify", "Flag": 3},
+    {"Hive": "HKLM", "List": "Run32", "Name": "Logitech Download Assistant", "Flag": 3},
+    {"Hive": "HKCU", "List": "StartupFolder", "Name": "Send to OneNote.lnk", "Flag": 3},
+    {"Hive": "HKCU", "List": "Run", "Name": "AppJaRemovido", "Flag": 3}
+  ]
+}

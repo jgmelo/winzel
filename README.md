@@ -3,8 +3,18 @@
 Utilitário de terminal que **observa, registra e compara** o estado da instalação do
 Windows 11 ao longo do tempo. A especificação completa está em [`SPEC.md`](SPEC.md).
 
-**Estado atual:** fase 0 (infraestrutura). O painel de testes em
+**Estado atual:** fase 1 (MVP: programas e inicialização). O painel de testes em
 [`docs/testes/index.html`](docs/testes/index.html) mostra o que o winzel sabe fazer hoje.
+
+## Uso
+
+```powershell
+.venv\Scripts\python.exe -m winzel            # interface (grava um snapshot ao abrir)
+.venv\Scripts\python.exe -m winzel snapshot   # sem interface: grava e imprime o resumo
+```
+
+Opções: `--db CAMINHO` (padrão `%LOCALAPPDATA%\winzel\winzel.db`) e `--config CAMINHO`
+(padrão `%APPDATA%\winzel\config.toml`). Teclas: `Tab` troca de aba, `r` atualiza, `q` sai.
 
 ## Ambiente de desenvolvimento (Windows)
 

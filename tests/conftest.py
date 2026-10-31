@@ -16,3 +16,13 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     if missing:
         listing = "\n  ".join(missing)
         raise pytest.UsageError(f"testes sem marker de fase e/ou de área:\n  {listing}")
+
+
+@pytest.fixture
+def banco():
+    """A fresh in-memory SQLite store, with all migrations applied."""
+    from winzel.store import Store
+
+    store = Store.open(":memory:")
+    yield store
+    store.close()

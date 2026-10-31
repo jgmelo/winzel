@@ -65,7 +65,7 @@ O **winzel** é um utilitário de terminal que **observa, registra e compara** o
 | Conceito | Definição |
 |---|---|
 | Snapshot | Registro completo do inventário e das métricas, gravado a cada execução |
-| Linha de base | O primeiro snapshot gravado; referência padrão nas fases 1 e 2. A partir da fase 3, registrada automaticamente como o milestone `linha-de-base` |
+| Linha de base | O primeiro snapshot gravado; referência padrão nas fases 1 e 2. É definida **por categoria**: o primeiro snapshot em que a checagem daquela categoria rodou sem erro e sem ser pulada. A partir da fase 3, registrada automaticamente como o milestone `linha-de-base` |
 | Milestone | Snapshot fixado e nomeado pelo usuário, com nota |
 | Diferença | Comparação entre dois snapshots, por categoria: adicionados, removidos e alterados (versão) |
 | Aprovação | Item marcado como esperado; sai da contagem de alertas |
@@ -84,7 +84,7 @@ Gera itens comparáveis entre snapshots. Cada item tem **chave** estável e **ve
 
 | ID | Checagem | Fonte e filtro | Chave | Versão/atributo | Admin | Fase |
 |---|---|---|---|---|---|---|
-| `programs` | Programas instalados | Registro `...\CurrentVersion\Uninstall` em HKLM (64 bits e `WOW6432Node`) e HKCU; ignora entradas sem `DisplayName` ou com `SystemComponent = 1` | `nome normalizado\|fabricante` (seção 12, risco 1) | `DisplayVersion` | Não | 1 |
+| `programs` | Programas instalados | Registro `...\CurrentVersion\Uninstall` em HKLM (64 bits e `WOW6432Node`) e HKCU; ignora entradas sem `DisplayName` ou com `SystemComponent = 1`; o mesmo programa em mais de uma fonte vira um item só (com a lista de fontes) | `nome normalizado\|fabricante` (seção 12, risco 1) | `DisplayVersion` | Não | 1 |
 | `startup` | Inicialização | Chaves `Run`/`RunOnce` (HKCU, HKLM, 32 bits) e pastas Startup (usuário e comum); estado via `...\Explorer\StartupApproved` | `nome\|local` | comando + ligado/desligado | Não | 1 |
 | `store_apps` | Apps da Store | `Get-AppxPackage`, sem frameworks nem apps de sistema | nome do pacote | versão | Não | 2 |
 | `scheduled_tasks` | Tarefas agendadas de terceiros | `Get-ScheduledTask`, fora de `\Microsoft\` | `caminho\|nome` | ação + estado | Não | 2 |
@@ -132,7 +132,7 @@ SQLite em `%LOCALAPPDATA%\winzel\winzel.db`.
 
 | Tabela | Colunas | Função |
 |---|---|---|
-| `snapshots` | `id`, `created_at`, `kind` (`auto`/`manual`), `is_admin` | Uma linha por execução |
+| `snapshots` | `id`, `created_at`, `kind` (`auto`/`manual`), `is_admin` | Uma linha por execução. `auto`: gravado ao abrir a interface (ou com `r`); `manual`: gravado por `python -m winzel snapshot` |
 | `check_runs` | `snapshot_id`, `check_id`, `status`, `summary`, `duration_ms`, `error` | Resultado de cada checagem no snapshot |
 | `items` | `snapshot_id`, `category`, `key`, `version`, `details_json` | Inventário completo do snapshot |
 | `metrics` | `snapshot_id`, `name`, `value`, `unit` | Valores numéricos do snapshot |
@@ -400,7 +400,7 @@ Uma fase só é concluída com todos os testes (desta e das anteriores) passando
 
 | # | Risco | Decisão |
 |---|---|---|
-| 1 | Nomes de programas com versão embutida (ex.: "Python 3.14.0 (64-bit)") fariam uma atualização aparecer como removido + adicionado | Normalizar a chave removendo padrões de versão do nome; guardar o nome original em `details`; cobrir com testes |
+| 1 | Nomes de programas com versão embutida (ex.: "Python 3.14.0 (64-bit)") fariam uma atualização aparecer como removido + adicionado | Normalizar a chave removendo padrões de versão do nome; guardar o nome original em `details`; cobrir com testes. Regra: minúsculas; remove números com ponto, com ou sem prefixo `v` (`3.14.0`, `v2.1`, `14.40.33810`) e separadores que sobrarem; mantém arquitetura e anos (`(x64)`, `2015-2022`), para que 32 e 64 bits sejam itens distintos. Limitação: números sem ponto ("Java 8 Update 401") permanecem |
 | 2 | Cada chamada ao PowerShell leva ~0,5–1 s para iniciar | Agrupar consultas em uma mesma chamada quando possível |
 | 3 | `wsl.exe` imprime em UTF-16, diferente das demais fontes | Decodificação específica, com teste |
 | 4 | Emojis podem desalinhar tabelas no Windows Terminal | Alternativa em texto (`[OK]`, `[!]`, `[X]`) configurável |

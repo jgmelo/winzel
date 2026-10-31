@@ -27,7 +27,7 @@ dev = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-winzel = ["*.toml"]
+winzel = ["*.toml", "store/migrations/*.sql"]
 
 # --- pytest -----------------------------------------------------------------
 # Markers (fase, área e `sistema`) são registrados pelo plugin do painel de
@@ -51,8 +51,5 @@ src = ["src", "tests", "tools"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
-
-[tool.ruff.lint.per-file-ignores]
-# Nomes e docstrings dos testes em português usam acentos e travessões.
-"tests/**" = ["RUF001", "RUF002", "RUF003"]
-"tools/**" = ["RUF001", "RUF002", "RUF003"]
+# Textos em português usam travessões; a interface usa emojis (➕ ➖) de propósito.
+ignore = ["RUF001", "RUF002", "RUF003"]

@@ -1,0 +1,14 @@
+# Configuração padrão do winzel.
+# Para mudar algo, crie %APPDATA%\winzel\config.toml só com as chaves desejadas;
+# elas se sobrepõem a estas.
+
+[display]
+# false: usa [OK] [!] [X] [-] [ERRO] em vez de emojis (SPEC, risco 4).
+emoji = true
+
+# Tempo máximo de cada checagem, em segundos.
+[checks.programs]
+timeout_s = 30
+
+[checks.startup]
+timeout_s = 30

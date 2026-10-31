@@ -1,0 +1,11 @@
+[
+  {"Source": "HKLM64", "RegistryKey": "Python3.14.0-64", "DisplayName": "Python 3.14.0 (64-bit)", "DisplayVersion": "3.14.150.0", "Publisher": "Python Software Foundation", "SystemComponent": null, "InstallDate": "20261015"},
+  {"Source": "HKLM64", "RegistryKey": "7-Zip", "DisplayName": "7-Zip 24.08 (x64)", "DisplayVersion": "24.08", "Publisher": "Igor Pavlov", "SystemComponent": null, "InstallDate": null},
+  {"Source": "HKLM64", "RegistryKey": "KB5034441", "DisplayName": null, "DisplayVersion": null, "Publisher": null, "SystemComponent": null, "InstallDate": null},
+  {"Source": "HKLM64", "RegistryKey": "{A1B2C3D4-0000-0000-0000-000000000001}", "DisplayName": "Microsoft Visual C++ 2022 X64 Minimum Runtime - 14.40.33810", "DisplayVersion": "14.40.33810", "Publisher": "Microsoft Corporation", "SystemComponent": 1, "InstallDate": "20260901"},
+  {"Source": "HKLM64", "RegistryKey": "Git_is1", "DisplayName": "Git", "DisplayVersion": "2.47.0", "Publisher": "The Git Development Community", "SystemComponent": null, "InstallDate": "20260920"},
+  {"Source": "HKLM64", "RegistryKey": "VLC media player", "DisplayName": "VLC media player", "DisplayVersion": 3, "Publisher": "VideoLAN", "SystemComponent": "0", "InstallDate": null},
+  {"Source": "HKLM32", "RegistryKey": "{A1B2C3D4-0000-0000-0000-000000000002}", "DisplayName": "Microsoft Visual C++ 2015-2022 Redistributable (x86) - 14.40.33810", "DisplayVersion": "14.40.33810.0", "Publisher": "Microsoft Corporation", "SystemComponent": null, "InstallDate": "20260901"},
+  {"Source": "HKCU", "RegistryKey": "{771FD6B0-FA20-440A-A002-3B3BAC16DC50}_is1", "DisplayName": "Microsoft Visual Studio Code (User)", "DisplayVersion": "1.95.3", "Publisher": "Microsoft Corporation", "SystemComponent": null, "InstallDate": "20261020"},
+  {"Source": "HKCU", "RegistryKey": "Git_is1", "DisplayName": "Git", "DisplayVersion": "2.47.0", "Publisher": "The Git Development Community", "SystemComponent": null, "InstallDate": "20260920"}
+]
