@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "winzel"
+version = "0.0.1"
+description = "Observa, registra e compara o estado da instalação do Windows ao longo do tempo."
+readme = "README.md"
+requires-python = ">=3.14"
+license = "LicenseRef-Proprietary"
+dependencies = [
+    "textual",
+    "textual-plotext",
+    "matplotlib",
+    "psutil",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pygments",
+    "ruff",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+winzel = ["*.toml"]
+
+# --- pytest -----------------------------------------------------------------
+# Markers (fase, área e `sistema`) são registrados pelo plugin do painel de
+# testes, a partir de tools/test_dashboard/taxonomy.py (fonte única).
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = [
+    "-p", "tools.test_dashboard.plugin",
+    "-p", "pytester",
+    "--strict-markers",
+    "-m", "not sistema",
+]
+
+# --- ruff -------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+src = ["src", "tests", "tools"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# Nomes e docstrings dos testes em português usam acentos e travessões.
+"tests/**" = ["RUF001", "RUF002", "RUF003"]
+"tools/**" = ["RUF001", "RUF002", "RUF003"]

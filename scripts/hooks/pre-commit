@@ -1,0 +1,44 @@
+#!/bin/sh
+# winzel — pre-commit (ativar com: git config core.hooksPath scripts/hooks)
+#
+# 1. Roda a suíte completa (exceto `sistema`).
+# 2. Se algum teste falhar, o commit é bloqueado.
+# 3. Se todos passarem, gera o painel de testes e o JSON do histórico e os
+#    inclui no mesmo commit.
+#
+# Para que o conteúdo testado seja exatamente o do commit, o hook recusa
+# commits com alterações não incluídas (fora de docs/testes).
+
+root="$(git rev-parse --show-toplevel)" || exit 1
+cd "$root" || exit 1
+
+if [ -n "$WINZEL_PYTHON" ]; then
+    PY="$WINZEL_PYTHON"
+elif [ -x .venv/Scripts/python.exe ]; then
+    PY=".venv/Scripts/python.exe"          # Windows (Git for Windows)
+elif [ -x .venv/bin/python ]; then
+    PY=".venv/bin/python"                  # Linux/macOS
+else
+    echo "winzel pre-commit: venv não encontrado em .venv — commit bloqueado." >&2
+    exit 1
+fi
+
+unstaged="$(git diff --name-only -- . ':(exclude)docs/testes')"
+untracked="$(git ls-files --others --exclude-standard -- . ':(exclude)docs/testes')"
+if [ -n "$unstaged$untracked" ]; then
+    echo "winzel pre-commit: há alterações fora do commit; os testes não refletiriam" >&2
+    echo "exatamente o conteúdo commitado. Inclua-as (git add) ou guarde-as" >&2
+    echo "(git stash push --keep-index --include-untracked). Commit bloqueado:" >&2
+    printf '%s\n' $unstaged $untracked | sed 's/^/  /' >&2
+    exit 1
+fi
+
+"$PY" -m pytest -q --painel-historico
+status=$?
+if [ "$status" -ne 0 ]; then
+    echo "winzel pre-commit: testes falharam (código $status) — commit bloqueado." >&2
+    exit 1
+fi
+
+git add docs/testes/index.html docs/testes/historico || exit 1
+echo "winzel pre-commit: testes aprovados; painel e histórico incluídos no commit."

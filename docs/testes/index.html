@@ -1,0 +1,524 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>winzel — painel de testes</title><style>
+:root {
+  --bg: #fafaf9; --fg: #1c1917; --muted: #57534e; --card: #ffffff; --line: #e7e5e4;
+  --ok: #15803d; --bad: #b91c1c; --skip: #a16207; --accent: #1d4ed8; --code: #f5f5f4;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1917; --fg: #f5f5f4; --muted: #a8a29e; --card: #292524; --line: #44403c;
+    --ok: #4ade80; --bad: #f87171; --skip: #facc15; --accent: #93c5fd; --code: #f5f5f4;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 15px/1.5 "Segoe UI", system-ui, sans-serif; }
+main { max-width: 1000px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { margin: 0 0 4px; font-size: 1.6rem; }
+h2 { margin: 40px 0 12px; font-size: 1.3rem; border-bottom: 1px solid var(--line);
+  padding-bottom: 6px; }
+h3 { margin: 24px 0 8px; font-size: 1.05rem; }
+h4 { margin: 16px 0 6px; font-size: .95rem; color: var(--muted); }
+nav a { color: var(--accent); margin-right: 16px; }
+.meta { display: grid; grid-template-columns: max-content 1fr; gap: 2px 16px; margin: 16px 0;
+  background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; }
+.meta dt { color: var(--muted); }
+.meta dd { margin: 0; overflow-wrap: anywhere; }
+code { font-family: Consolas, "Cascadia Mono", monospace; }
+.totals .passed { color: var(--ok); } .totals .failed { color: var(--bad); }
+.totals .skipped { color: var(--skip); }
+.summary { color: var(--muted); font-weight: normal; font-size: .9rem; margin-left: 8px; }
+.test { background: var(--card); border: 1px solid var(--line); border-left-width: 4px;
+  border-radius: 6px; padding: 8px 12px; margin: 8px 0; }
+.test.passed { border-left-color: var(--ok); } .test.failed { border-left-color: var(--bad); }
+.test.skipped { border-left-color: var(--skip); }
+.test-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.test-name { font-weight: 600; flex: 1; }
+.duration { color: var(--muted); font-size: .85rem; }
+.doc { margin: 4px 0; }
+.message { margin: 6px 0; padding: 6px 10px; border-radius: 4px; background: var(--code);
+  color: #7f1d1d; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; }
+.test.skipped .message { color: #713f12; }
+details.code summary { cursor: pointer; color: var(--accent); font-size: .9rem; }
+.highlight { background: var(--code); color: #1c1917; border-radius: 4px; overflow-x: auto;
+  padding: 8px 12px; margin-top: 6px; font-size: .85rem; }
+.highlight pre { margin: 0; }
+.capabilities ul { margin: 4px 0 12px; padding-left: 20px; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; font-size: .85rem; background: var(--card); }
+th, td { border: 1px solid var(--line); padding: 4px 8px; text-align: right; white-space: nowrap; }
+th:first-child, td:first-child, td.commit { text-align: left; }
+.empty { color: var(--muted); font-style: italic; }
+pre { line-height: 125%; }
+td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.highlight .hll { background-color: #ffffcc }
+.highlight { background: #f8f8f8; }
+.highlight .c { color: #3D7B7B; font-style: italic } /* Comment */
+.highlight .err { border: 1px solid #F00 } /* Error */
+.highlight .k { color: #008000; font-weight: bold } /* Keyword */
+.highlight .o { color: #666 } /* Operator */
+.highlight .ch { color: #3D7B7B; font-style: italic } /* Comment.Hashbang */
+.highlight .cm { color: #3D7B7B; font-style: italic } /* Comment.Multiline */
+.highlight .cp { color: #9C6500 } /* Comment.Preproc */
+.highlight .cpf { color: #3D7B7B; font-style: italic } /* Comment.PreprocFile */
+.highlight .c1 { color: #3D7B7B; font-style: italic } /* Comment.Single */
+.highlight .cs { color: #3D7B7B; font-style: italic } /* Comment.Special */
+.highlight .gd { color: #A00000 } /* Generic.Deleted */
+.highlight .ge { font-style: italic } /* Generic.Emph */
+.highlight .ges { font-weight: bold; font-style: italic } /* Generic.EmphStrong */
+.highlight .gr { color: #E40000 } /* Generic.Error */
+.highlight .gh { color: #000080; font-weight: bold } /* Generic.Heading */
+.highlight .gi { color: #008400 } /* Generic.Inserted */
+.highlight .go { color: #717171 } /* Generic.Output */
+.highlight .gp { color: #000080; font-weight: bold } /* Generic.Prompt */
+.highlight .gs { font-weight: bold } /* Generic.Strong */
+.highlight .gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+.highlight .gt { color: #04D } /* Generic.Traceback */
+.highlight .kc { color: #008000; font-weight: bold } /* Keyword.Constant */
+.highlight .kd { color: #008000; font-weight: bold } /* Keyword.Declaration */
+.highlight .kn { color: #008000; font-weight: bold } /* Keyword.Namespace */
+.highlight .kp { color: #008000 } /* Keyword.Pseudo */
+.highlight .kr { color: #008000; font-weight: bold } /* Keyword.Reserved */
+.highlight .kt { color: #B00040 } /* Keyword.Type */
+.highlight .m { color: #666 } /* Literal.Number */
+.highlight .s { color: #BA2121 } /* Literal.String */
+.highlight .na { color: #687822 } /* Name.Attribute */
+.highlight .nb { color: #008000 } /* Name.Builtin */
+.highlight .nc { color: #00F; font-weight: bold } /* Name.Class */
+.highlight .no { color: #800 } /* Name.Constant */
+.highlight .nd { color: #A2F } /* Name.Decorator */
+.highlight .ni { color: #717171; font-weight: bold } /* Name.Entity */
+.highlight .ne { color: #CB3F38; font-weight: bold } /* Name.Exception */
+.highlight .nf { color: #00F } /* Name.Function */
+.highlight .nl { color: #767600 } /* Name.Label */
+.highlight .nn { color: #00F; font-weight: bold } /* Name.Namespace */
+.highlight .nt { color: #008000; font-weight: bold } /* Name.Tag */
+.highlight .nv { color: #19177C } /* Name.Variable */
+.highlight .ow { color: #A2F; font-weight: bold } /* Operator.Word */
+.highlight .w { color: #BBB } /* Text.Whitespace */
+.highlight .mb { color: #666 } /* Literal.Number.Bin */
+.highlight .mf { color: #666 } /* Literal.Number.Float */
+.highlight .mh { color: #666 } /* Literal.Number.Hex */
+.highlight .mi { color: #666 } /* Literal.Number.Integer */
+.highlight .mo { color: #666 } /* Literal.Number.Oct */
+.highlight .sa { color: #BA2121 } /* Literal.String.Affix */
+.highlight .sb { color: #BA2121 } /* Literal.String.Backtick */
+.highlight .sc { color: #BA2121 } /* Literal.String.Char */
+.highlight .dl { color: #BA2121 } /* Literal.String.Delimiter */
+.highlight .sd { color: #BA2121; font-style: italic } /* Literal.String.Doc */
+.highlight .s2 { color: #BA2121 } /* Literal.String.Double */
+.highlight .se { color: #AA5D1F; font-weight: bold } /* Literal.String.Escape */
+.highlight .sh { color: #BA2121 } /* Literal.String.Heredoc */
+.highlight .si { color: #A45A77; font-weight: bold } /* Literal.String.Interpol */
+.highlight .sx { color: #008000 } /* Literal.String.Other */
+.highlight .sr { color: #A45A77 } /* Literal.String.Regex */
+.highlight .s1 { color: #BA2121 } /* Literal.String.Single */
+.highlight .ss { color: #19177C } /* Literal.String.Symbol */
+.highlight .bp { color: #008000 } /* Name.Builtin.Pseudo */
+.highlight .fm { color: #00F } /* Name.Function.Magic */
+.highlight .vc { color: #19177C } /* Name.Variable.Class */
+.highlight .vg { color: #19177C } /* Name.Variable.Global */
+.highlight .vi { color: #19177C } /* Name.Variable.Instance */
+.highlight .vm { color: #19177C } /* Name.Variable.Magic */
+.highlight .il { color: #666 } /* Literal.Number.Integer.Long */</style></head><body><main><header><h1>winzel — painel de testes</h1><nav><a href="#capacidades">Mapa de capacidades</a><a href="#testes">Testes</a><a href="#evolucao">Evolução</a></nav><dl class="meta"><dt>Commit anterior</dt><dd><code>3f876ab</code> Initial commit</dd><dt>Branch</dt><dd>main</dd><dt>Gerado em</dt><dd>31/10/2026 18:20:58</dd><dt>Totais</dt><dd><span class="totals"><span class="passed">✅ 40 aprovados</span> · <span class="failed">❌ 0 falhos</span> · <span class="skipped">⏭️ 0 pulados</span></span> (total 40)</dd><dt>Duração</dt><dd>3.63 s</dd></dl></header><section class="capabilities" id="capacidades"><h2>Mapa de capacidades</h2><p>O que o winzel sabe fazer hoje, segundo os testes aprovados.</p><h4>Execução</h4><ul><li>Dado o venv do projeto, quando os testes rodam, então o Python é 3.14 ou superior.</li><li>Dado `pip install -e .[dev]`, quando importo `winzel`, então ele expõe `__version__`.</li><li>Dado o venv instalado, quando importo cada dependência declarada, então ela existe.</li></ul><h4>Painel de testes</h4><ul><li>Dado `test_programa_novo_aparece`, quando gero o nome, então vira `programa novo aparece`.</li><li>Dado um teste parametrizado, quando gero o nome, então o parâmetro vai entre colchetes.</li><li>Dada uma falha com várias linhas, quando resumo, então fica só a primeira, sem o `E`.</li><li>Dada uma mensagem de 500 caracteres, quando resumo, então ela é cortada em 200 com `…`.</li><li>Dado o motivo `Skipped: requer admin`, quando resumo, então fica `requer admin`.</li><li>Dados testes de fases e áreas misturadas, quando agrupo, então seguem a ordem da SPEC.</li><li>Dada uma área com 2 aprovados, 1 falho e 1 pulado, então o sumário conta cada um.</li><li>Dados testes aprovados e falhos, quando monto o mapa, então só os aprovados aparecem.</li><li>Dado um teste falho, quando gero o painel, então ele aparece com ❌ e a mensagem resumida.</li><li>Dados um teste aprovado e um pulado, quando gero o painel, então aparecem ✅ e ⏭️.</li><li>Dada uma execução após o commit 3f876ab na main, então o cabeçalho traz esses dados.</li><li>Dado um repositório sem commits, quando gero o painel, então o cabeçalho diz isso.</li><li>Dado um teste da fase 0 na área relatorio, então o painel usa os rótulos em português.</li><li>Dado um teste sem markers de fase e área, então ele aparece em `Sem fase` / `Sem área`.</li><li>Dada uma docstring com `&lt;` e `&amp;`, quando gero o painel, então ela aparece escapada.</li><li>Dado o código de um teste, então ele fica num &lt;details&gt; com destaque do pygments.</li><li>Dado um teste aprovado, então sua docstring aparece na seção Mapa de capacidades.</li><li>Dada uma execução com 3 testes, quando resumo para o histórico, então os totais batem.</li><li>Dadas execuções sobre dois commits, então há dois JSONs, nomeados por data e hash.</li><li>Dados JSONs válidos e um corrompido, quando leio o histórico, então vêm os válidos.</li><li>Dado um histórico de dois commits, então a seção Evolução tem uma linha por commit.</li><li>Dado um histórico vazio, quando gero o painel, então a Evolução diz `Sem histórico ainda`.</li><li>Dada uma suíte com aprovado, falho e pulado, quando rodo o pytest, então o painel os traz.</li><li>Dado marker de fase/área no módulo e outro na função, então o da função define o grupo.</li><li>Dada uma suíte com falha, quando rodo com --painel-historico, então nenhum JSON é gravado.</li><li>Dada uma suíte toda aprovada, quando rodo com --painel-historico, então grava um JSON.</li><li>Dada a opção --sem-painel, quando rodo o pytest, então nenhum painel é gerado.</li><li>Dado um marker fora da SPEC, quando rodo com --strict-markers, então a coleta falha.</li><li>Dada uma suíte aprovada, quando faço o commit, então ele contém index.html e um JSON novo.</li><li>Dado um teste falhando de propósito, quando faço o commit, então ele é cancelado.</li><li>Dados dois commits aprovados, então o histórico no HEAD tem dois JSONs.</li><li>Dado um arquivo alterado mas não incluído, quando faço o commit, então ele é bloqueado.</li></ul></section><section id="testes"><h2>Testes por fase e área</h2><section class="phase" id="fase0"><h3>Fase 0 — infraestrutura<span class="summary">40 testes · ✅ 40</span></h3><h4>Execução<span class="summary">8 testes · ✅ 8</span></h4><article class="test passed" id="tests/test_ambiente.py::test_python_e_da_versao_3_14_ou_superior"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">python e da versao 3 14 ou superior</span><span class="duration">0 ms</span></div><p class="doc">Dado o venv do projeto, quando os testes rodam, então o Python é 3.14 ou superior.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_python_e_da_versao_3_14_ou_superior</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dado o venv do projeto, quando os testes rodam, então o Python é 3.14 ou superior."""</span>
+    <span class="n">versao</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span>
+
+    <span class="k">assert</span> <span class="n">versao</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">14</span><span class="p">)</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_ambiente.py::test_pacote_winzel_esta_instalado_e_informa_sua_versao"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">pacote winzel esta instalado e informa sua versao</span><span class="duration">1 ms</span></div><p class="doc">Dado `pip install -e .[dev]`, quando importo `winzel`, então ele expõe `__version__`.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_pacote_winzel_esta_instalado_e_informa_sua_versao</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dado `pip install -e .[dev]`, quando importo `winzel`, então ele expõe `__version__`."""</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">winzel</span>
+
+    <span class="k">assert</span> <span class="n">winzel</span><span class="o">.</span><span class="n">__version__</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_ambiente.py::test_dependencias_de_execucao_e_desenvolvimento_estao_disponiveis[textual]"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">dependencias de execucao e desenvolvimento estao disponiveis [textual]</span><span class="duration">69 ms</span></div><p class="doc">Dado o venv instalado, quando importo cada dependência declarada, então ela existe.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span>
+    <span class="s2">"modulo"</span><span class="p">,</span>
+    <span class="p">[</span><span class="s2">"textual"</span><span class="p">,</span> <span class="s2">"textual_plotext"</span><span class="p">,</span> <span class="s2">"matplotlib"</span><span class="p">,</span> <span class="s2">"psutil"</span><span class="p">,</span> <span class="s2">"pygments"</span><span class="p">,</span> <span class="s2">"pytest"</span><span class="p">],</span>
+<span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_dependencias_de_execucao_e_desenvolvimento_estao_disponiveis</span><span class="p">(</span><span class="n">modulo</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dado o venv instalado, quando importo cada dependência declarada, então ela existe."""</span>
+    <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">modulo</span><span class="p">)</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_ambiente.py::test_dependencias_de_execucao_e_desenvolvimento_estao_disponiveis[textual_plotext]"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">dependencias de execucao e desenvolvimento estao disponiveis [textual_plotext]</span><span class="duration">90 ms</span></div><p class="doc">Dado o venv instalado, quando importo cada dependência declarada, então ela existe.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span>
+    <span class="s2">"modulo"</span><span class="p">,</span>
+    <span class="p">[</span><span class="s2">"textual"</span><span class="p">,</span> <span class="s2">"textual_plotext"</span><span class="p">,</span> <span class="s2">"matplotlib"</span><span class="p">,</span> <span class="s2">"psutil"</span><span class="p">,</span> <span class="s2">"pygments"</span><span class="p">,</span> <span class="s2">"pytest"</span><span class="p">],</span>
+<span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_dependencias_de_execucao_e_desenvolvimento_estao_disponiveis</span><span class="p">(</span><span class="n">modulo</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dado o venv instalado, quando importo cada dependência declarada, então ela existe."""</span>
+    <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">modulo</span><span class="p">)</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_ambiente.py::test_dependencias_de_execucao_e_desenvolvimento_estao_disponiveis[matplotlib]"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">dependencias de execucao e desenvolvimento estao disponiveis [matplotlib]</span><span class="duration">127 ms</span></div><p class="doc">Dado o venv instalado, quando importo cada dependência declarada, então ela existe.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span>
+    <span class="s2">"modulo"</span><span class="p">,</span>
+    <span class="p">[</span><span class="s2">"textual"</span><span class="p">,</span> <span class="s2">"textual_plotext"</span><span class="p">,</span> <span class="s2">"matplotlib"</span><span class="p">,</span> <span class="s2">"psutil"</span><span class="p">,</span> <span class="s2">"pygments"</span><span class="p">,</span> <span class="s2">"pytest"</span><span class="p">],</span>
+<span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_dependencias_de_execucao_e_desenvolvimento_estao_disponiveis</span><span class="p">(</span><span class="n">modulo</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dado o venv instalado, quando importo cada dependência declarada, então ela existe."""</span>
+    <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">modulo</span><span class="p">)</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_ambiente.py::test_dependencias_de_execucao_e_desenvolvimento_estao_disponiveis[psutil]"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">dependencias de execucao e desenvolvimento estao disponiveis [psutil]</span><span class="duration">11 ms</span></div><p class="doc">Dado o venv instalado, quando importo cada dependência declarada, então ela existe.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span>
+    <span class="s2">"modulo"</span><span class="p">,</span>
+    <span class="p">[</span><span class="s2">"textual"</span><span class="p">,</span> <span class="s2">"textual_plotext"</span><span class="p">,</span> <span class="s2">"matplotlib"</span><span class="p">,</span> <span class="s2">"psutil"</span><span class="p">,</span> <span class="s2">"pygments"</span><span class="p">,</span> <span class="s2">"pytest"</span><span class="p">],</span>
+<span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_dependencias_de_execucao_e_desenvolvimento_estao_disponiveis</span><span class="p">(</span><span class="n">modulo</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dado o venv instalado, quando importo cada dependência declarada, então ela existe."""</span>
+    <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">modulo</span><span class="p">)</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_ambiente.py::test_dependencias_de_execucao_e_desenvolvimento_estao_disponiveis[pygments]"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">dependencias de execucao e desenvolvimento estao disponiveis [pygments]</span><span class="duration">1 ms</span></div><p class="doc">Dado o venv instalado, quando importo cada dependência declarada, então ela existe.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span>
+    <span class="s2">"modulo"</span><span class="p">,</span>
+    <span class="p">[</span><span class="s2">"textual"</span><span class="p">,</span> <span class="s2">"textual_plotext"</span><span class="p">,</span> <span class="s2">"matplotlib"</span><span class="p">,</span> <span class="s2">"psutil"</span><span class="p">,</span> <span class="s2">"pygments"</span><span class="p">,</span> <span class="s2">"pytest"</span><span class="p">],</span>
+<span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_dependencias_de_execucao_e_desenvolvimento_estao_disponiveis</span><span class="p">(</span><span class="n">modulo</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dado o venv instalado, quando importo cada dependência declarada, então ela existe."""</span>
+    <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">modulo</span><span class="p">)</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_ambiente.py::test_dependencias_de_execucao_e_desenvolvimento_estao_disponiveis[pytest]"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">dependencias de execucao e desenvolvimento estao disponiveis [pytest]</span><span class="duration">0 ms</span></div><p class="doc">Dado o venv instalado, quando importo cada dependência declarada, então ela existe.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span>
+    <span class="s2">"modulo"</span><span class="p">,</span>
+    <span class="p">[</span><span class="s2">"textual"</span><span class="p">,</span> <span class="s2">"textual_plotext"</span><span class="p">,</span> <span class="s2">"matplotlib"</span><span class="p">,</span> <span class="s2">"psutil"</span><span class="p">,</span> <span class="s2">"pygments"</span><span class="p">,</span> <span class="s2">"pytest"</span><span class="p">],</span>
+<span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_dependencias_de_execucao_e_desenvolvimento_estao_disponiveis</span><span class="p">(</span><span class="n">modulo</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dado o venv instalado, quando importo cada dependência declarada, então ela existe."""</span>
+    <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">modulo</span><span class="p">)</span>
+</pre></div>
+</details></article><h4>Painel de testes<span class="summary">32 testes · ✅ 32</span></h4><article class="test passed" id="tests/test_painel_de_testes.py::test_nome_legivel_remove_prefixo_test_e_troca_sublinhados_por_espacos"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">nome legivel remove prefixo test e troca sublinhados por espacos</span><span class="duration">0 ms</span></div><p class="doc">Dado `test_programa_novo_aparece`, quando gero o nome, então vira `programa novo aparece`.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_nome_legivel_remove_prefixo_test_e_troca_sublinhados_por_espacos</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dado `test_programa_novo_aparece`, quando gero o nome, então vira `programa novo aparece`."""</span>
+    <span class="n">nome</span> <span class="o">=</span> <span class="n">readable_name</span><span class="p">(</span><span class="s2">"test_programa_novo_aparece"</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">nome</span> <span class="o">==</span> <span class="s2">"programa novo aparece"</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_nome_legivel_preserva_o_parametro_de_testes_parametrizados"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">nome legivel preserva o parametro de testes parametrizados</span><span class="duration">0 ms</span></div><p class="doc">Dado um teste parametrizado, quando gero o nome, então o parâmetro vai entre colchetes.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_nome_legivel_preserva_o_parametro_de_testes_parametrizados</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dado um teste parametrizado, quando gero o nome, então o parâmetro vai entre colchetes."""</span>
+    <span class="n">nome</span> <span class="o">=</span> <span class="n">readable_name</span><span class="p">(</span><span class="s2">"test_dependencia_disponivel[psutil]"</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">nome</span> <span class="o">==</span> <span class="s2">"dependencia disponivel [psutil]"</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_mensagem_de_falha_e_resumida_a_primeira_linha"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">mensagem de falha e resumida a primeira linha</span><span class="duration">0 ms</span></div><p class="doc">Dada uma falha com várias linhas, quando resumo, então fica só a primeira, sem o `E`.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_mensagem_de_falha_e_resumida_a_primeira_linha</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dada uma falha com várias linhas, quando resumo, então fica só a primeira, sem o `E`."""</span>
+    <span class="n">falha</span> <span class="o">=</span> <span class="s2">"E   assert 3 == 4</span><span class="se">\n</span><span class="s2">E    +  where 3 = len([1, 2, 3])</span><span class="se">\n</span><span class="s2">"</span>
+
+    <span class="n">resumo</span> <span class="o">=</span> <span class="n">summarize_message</span><span class="p">(</span><span class="n">falha</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">resumo</span> <span class="o">==</span> <span class="s2">"assert 3 == 4"</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_mensagem_muito_longa_e_truncada_com_reticencias"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">mensagem muito longa e truncada com reticencias</span><span class="duration">0 ms</span></div><p class="doc">Dada uma mensagem de 500 caracteres, quando resumo, então ela é cortada em 200 com `…`.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_mensagem_muito_longa_e_truncada_com_reticencias</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dada uma mensagem de 500 caracteres, quando resumo, então ela é cortada em 200 com `…`."""</span>
+    <span class="n">resumo</span> <span class="o">=</span> <span class="n">summarize_message</span><span class="p">(</span><span class="s2">"x"</span> <span class="o">*</span> <span class="mi">500</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">resumo</span><span class="p">)</span> <span class="o">==</span> <span class="mi">200</span>
+    <span class="k">assert</span> <span class="n">resumo</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"…"</span><span class="p">)</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_motivo_de_teste_pulado_perde_o_prefixo_skipped"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">motivo de teste pulado perde o prefixo skipped</span><span class="duration">0 ms</span></div><p class="doc">Dado o motivo `Skipped: requer admin`, quando resumo, então fica `requer admin`.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_motivo_de_teste_pulado_perde_o_prefixo_skipped</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dado o motivo `Skipped: requer admin`, quando resumo, então fica `requer admin`."""</span>
+    <span class="n">resumo</span> <span class="o">=</span> <span class="n">summarize_message</span><span class="p">(</span><span class="s2">"Skipped: requer admin"</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">resumo</span> <span class="o">==</span> <span class="s2">"requer admin"</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_testes_sao_agrupados_por_fase_e_depois_por_area_na_ordem_da_spec"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">testes sao agrupados por fase e depois por area na ordem da spec</span><span class="duration">0 ms</span></div><p class="doc">Dados testes de fases e áreas misturadas, quando agrupo, então seguem a ordem da SPEC.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_testes_sao_agrupados_por_fase_e_depois_por_area_na_ordem_da_spec</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dados testes de fases e áreas misturadas, quando agrupo, então seguem a ordem da SPEC."""</span>
+    <span class="n">testes</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">um_teste</span><span class="p">(</span><span class="n">phase</span><span class="o">=</span><span class="s2">"fase1"</span><span class="p">,</span> <span class="n">area</span><span class="o">=</span><span class="s2">"diff"</span><span class="p">),</span>
+        <span class="n">um_teste</span><span class="p">(</span><span class="n">phase</span><span class="o">=</span><span class="s2">"fase0"</span><span class="p">,</span> <span class="n">area</span><span class="o">=</span><span class="s2">"relatorio"</span><span class="p">),</span>
+        <span class="n">um_teste</span><span class="p">(</span><span class="n">phase</span><span class="o">=</span><span class="s2">"fase1"</span><span class="p">,</span> <span class="n">area</span><span class="o">=</span><span class="s2">"inventario"</span><span class="p">),</span>
+        <span class="n">um_teste</span><span class="p">(</span><span class="n">phase</span><span class="o">=</span><span class="s2">"fase0"</span><span class="p">,</span> <span class="n">area</span><span class="o">=</span><span class="s2">"execucao"</span><span class="p">),</span>
+    <span class="p">]</span>
+
+    <span class="n">grupos</span> <span class="o">=</span> <span class="n">group_records</span><span class="p">(</span><span class="n">testes</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="p">[</span><span class="n">g</span><span class="o">.</span><span class="n">phase</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">grupos</span><span class="p">]</span> <span class="o">==</span> <span class="p">[</span><span class="s2">"fase0"</span><span class="p">,</span> <span class="s2">"fase1"</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">area</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">grupos</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">areas</span><span class="p">]</span> <span class="o">==</span> <span class="p">[</span><span class="s2">"execucao"</span><span class="p">,</span> <span class="s2">"relatorio"</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">area</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">grupos</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">areas</span><span class="p">]</span> <span class="o">==</span> <span class="p">[</span><span class="s2">"inventario"</span><span class="p">,</span> <span class="s2">"diff"</span><span class="p">]</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_cada_grupo_tem_seu_sumario_de_aprovados_falhos_e_pulados"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">cada grupo tem seu sumario de aprovados falhos e pulados</span><span class="duration">0 ms</span></div><p class="doc">Dada uma área com 2 aprovados, 1 falho e 1 pulado, então o sumário conta cada um.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_cada_grupo_tem_seu_sumario_de_aprovados_falhos_e_pulados</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dada uma área com 2 aprovados, 1 falho e 1 pulado, então o sumário conta cada um."""</span>
+    <span class="n">testes</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">um_teste</span><span class="p">(</span><span class="n">outcome</span><span class="o">=</span><span class="n">PASSED</span><span class="p">),</span>
+        <span class="n">um_teste</span><span class="p">(</span><span class="n">outcome</span><span class="o">=</span><span class="n">PASSED</span><span class="p">),</span>
+        <span class="n">um_teste</span><span class="p">(</span><span class="n">outcome</span><span class="o">=</span><span class="n">FAILED</span><span class="p">),</span>
+        <span class="n">um_teste</span><span class="p">(</span><span class="n">outcome</span><span class="o">=</span><span class="n">SKIPPED</span><span class="p">),</span>
+    <span class="p">]</span>
+
+    <span class="n">totais</span> <span class="o">=</span> <span class="n">group_records</span><span class="p">(</span><span class="n">testes</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">areas</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">totals</span>
+
+    <span class="k">assert</span> <span class="p">(</span><span class="n">totais</span><span class="o">.</span><span class="n">passed</span><span class="p">,</span> <span class="n">totais</span><span class="o">.</span><span class="n">failed</span><span class="p">,</span> <span class="n">totais</span><span class="o">.</span><span class="n">skipped</span><span class="p">,</span> <span class="n">totais</span><span class="o">.</span><span class="n">total</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_mapa_de_capacidades_lista_so_docstrings_de_testes_aprovados_por_area"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">mapa de capacidades lista so docstrings de testes aprovados por area</span><span class="duration">1 ms</span></div><p class="doc">Dados testes aprovados e falhos, quando monto o mapa, então só os aprovados aparecem.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_mapa_de_capacidades_lista_so_docstrings_de_testes_aprovados_por_area</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dados testes aprovados e falhos, quando monto o mapa, então só os aprovados aparecem."""</span>
+    <span class="n">testes</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">um_teste</span><span class="p">(</span><span class="n">area</span><span class="o">=</span><span class="s2">"relatorio"</span><span class="p">,</span> <span class="n">docstring</span><span class="o">=</span><span class="s2">"Sabe resumir falhas."</span><span class="p">),</span>
+        <span class="n">um_teste</span><span class="p">(</span><span class="n">area</span><span class="o">=</span><span class="s2">"relatorio"</span><span class="p">,</span> <span class="n">docstring</span><span class="o">=</span><span class="s2">"Ainda não sabe isto."</span><span class="p">,</span> <span class="n">outcome</span><span class="o">=</span><span class="n">FAILED</span><span class="p">),</span>
+        <span class="n">um_teste</span><span class="p">(</span><span class="n">area</span><span class="o">=</span><span class="s2">"execucao"</span><span class="p">,</span> <span class="n">docstring</span><span class="o">=</span><span class="s2">"Sabe importar o pacote."</span><span class="p">),</span>
+    <span class="p">]</span>
+
+    <span class="n">mapa</span> <span class="o">=</span> <span class="n">capabilities</span><span class="p">(</span><span class="n">testes</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">mapa</span> <span class="o">==</span> <span class="p">{</span>
+        <span class="s2">"execucao"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"Sabe importar o pacote."</span><span class="p">],</span>
+        <span class="s2">"relatorio"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"Sabe resumir falhas."</span><span class="p">],</span>
+    <span class="p">}</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_teste_falho_aparece_com_x_vermelho_e_mensagem_resumida"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">teste falho aparece com x vermelho e mensagem resumida</span><span class="duration">27 ms</span></div><p class="doc">Dado um teste falho, quando gero o painel, então ele aparece com ❌ e a mensagem resumida.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_teste_falho_aparece_com_x_vermelho_e_mensagem_resumida</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dado um teste falho, quando gero o painel, então ele aparece com ❌ e a mensagem resumida."""</span>
+    <span class="n">falho</span> <span class="o">=</span> <span class="n">um_teste</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"soma confere"</span><span class="p">,</span> <span class="n">outcome</span><span class="o">=</span><span class="n">FAILED</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s2">"assert 3 == 4"</span><span class="p">)</span>
+
+    <span class="n">html</span> <span class="o">=</span> <span class="n">render_html</span><span class="p">([</span><span class="n">falho</span><span class="p">],</span> <span class="n">uma_execucao</span><span class="p">(),</span> <span class="n">history</span><span class="o">=</span><span class="p">[])</span>
+
+    <span class="k">assert</span> <span class="s1">'&lt;article class="test failed"'</span> <span class="ow">in</span> <span class="n">html</span>
+    <span class="k">assert</span> <span class="s2">"❌"</span> <span class="ow">in</span> <span class="n">html</span>
+    <span class="k">assert</span> <span class="s1">'&lt;div class="message"&gt;assert 3 == 4&lt;/div&gt;'</span> <span class="ow">in</span> <span class="n">html</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_teste_aprovado_aparece_com_check_e_pulado_com_seta"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">teste aprovado aparece com check e pulado com seta</span><span class="duration">1 ms</span></div><p class="doc">Dados um teste aprovado e um pulado, quando gero o painel, então aparecem ✅ e ⏭️.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_teste_aprovado_aparece_com_check_e_pulado_com_seta</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dados um teste aprovado e um pulado, quando gero o painel, então aparecem ✅ e ⏭️."""</span>
+    <span class="n">testes</span> <span class="o">=</span> <span class="p">[</span><span class="n">um_teste</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"aprovado"</span><span class="p">),</span> <span class="n">um_teste</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"pulado"</span><span class="p">,</span> <span class="n">outcome</span><span class="o">=</span><span class="n">SKIPPED</span><span class="p">)]</span>
+
+    <span class="n">html</span> <span class="o">=</span> <span class="n">render_html</span><span class="p">(</span><span class="n">testes</span><span class="p">,</span> <span class="n">uma_execucao</span><span class="p">(),</span> <span class="n">history</span><span class="o">=</span><span class="p">[])</span>
+
+    <span class="k">assert</span> <span class="s1">'&lt;span class="status" title="aprovado"&gt;✅&lt;/span&gt;'</span> <span class="ow">in</span> <span class="n">html</span>
+    <span class="k">assert</span> <span class="s1">'&lt;span class="status" title="pulado"&gt;⏭️&lt;/span&gt;'</span> <span class="ow">in</span> <span class="n">html</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_cabecalho_mostra_commit_anterior_branch_data_totais_e_duracao"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">cabecalho mostra commit anterior branch data totais e duracao</span><span class="duration">1 ms</span></div><p class="doc">Dada uma execução após o commit 3f876ab na main, então o cabeçalho traz esses dados.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_cabecalho_mostra_commit_anterior_branch_data_totais_e_duracao</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dada uma execução após o commit 3f876ab na main, então o cabeçalho traz esses dados."""</span>
+    <span class="n">testes</span> <span class="o">=</span> <span class="p">[</span><span class="n">um_teste</span><span class="p">(),</span> <span class="n">um_teste</span><span class="p">(</span><span class="n">outcome</span><span class="o">=</span><span class="n">FAILED</span><span class="p">),</span> <span class="n">um_teste</span><span class="p">(</span><span class="n">outcome</span><span class="o">=</span><span class="n">SKIPPED</span><span class="p">)]</span>
+
+    <span class="n">html</span> <span class="o">=</span> <span class="n">render_html</span><span class="p">(</span><span class="n">testes</span><span class="p">,</span> <span class="n">uma_execucao</span><span class="p">(),</span> <span class="n">history</span><span class="o">=</span><span class="p">[])</span>
+
+    <span class="k">assert</span> <span class="s2">"&lt;code&gt;3f876ab&lt;/code&gt; Initial commit"</span> <span class="ow">in</span> <span class="n">html</span>
+    <span class="k">assert</span> <span class="s2">"&lt;dt&gt;Branch&lt;/dt&gt;&lt;dd&gt;main&lt;/dd&gt;"</span> <span class="ow">in</span> <span class="n">html</span>
+    <span class="k">assert</span> <span class="s2">"31/10/2026 14:30:05"</span> <span class="ow">in</span> <span class="n">html</span>
+    <span class="k">assert</span> <span class="s2">"✅ 1 aprovados"</span> <span class="ow">in</span> <span class="n">html</span> <span class="ow">and</span> <span class="s2">"❌ 1 falhos"</span> <span class="ow">in</span> <span class="n">html</span> <span class="ow">and</span> <span class="s2">"⏭️ 1 pulados"</span> <span class="ow">in</span> <span class="n">html</span>
+    <span class="k">assert</span> <span class="s2">"&lt;dt&gt;Duração&lt;/dt&gt;&lt;dd&gt;1.50 s&lt;/dd&gt;"</span> <span class="ow">in</span> <span class="n">html</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_cabecalho_do_primeiro_commit_indica_que_nao_ha_commit_anterior"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">cabecalho do primeiro commit indica que nao ha commit anterior</span><span class="duration">1 ms</span></div><p class="doc">Dado um repositório sem commits, quando gero o painel, então o cabeçalho diz isso.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_cabecalho_do_primeiro_commit_indica_que_nao_ha_commit_anterior</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dado um repositório sem commits, quando gero o painel, então o cabeçalho diz isso."""</span>
+    <span class="n">html</span> <span class="o">=</span> <span class="n">render_html</span><span class="p">([</span><span class="n">um_teste</span><span class="p">()],</span> <span class="n">uma_execucao</span><span class="p">(</span><span class="n">parent_hash</span><span class="o">=</span><span class="kc">None</span><span class="p">),</span> <span class="n">history</span><span class="o">=</span><span class="p">[])</span>
+
+    <span class="k">assert</span> <span class="s2">"nenhum (primeiro commit)"</span> <span class="ow">in</span> <span class="n">html</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_painel_mostra_rotulos_de_fase_e_area_em_portugues"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">painel mostra rotulos de fase e area em portugues</span><span class="duration">0 ms</span></div><p class="doc">Dado um teste da fase 0 na área relatorio, então o painel usa os rótulos em português.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_painel_mostra_rotulos_de_fase_e_area_em_portugues</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dado um teste da fase 0 na área relatorio, então o painel usa os rótulos em português."""</span>
+    <span class="n">html</span> <span class="o">=</span> <span class="n">render_html</span><span class="p">([</span><span class="n">um_teste</span><span class="p">()],</span> <span class="n">uma_execucao</span><span class="p">(),</span> <span class="n">history</span><span class="o">=</span><span class="p">[])</span>
+
+    <span class="k">assert</span> <span class="s2">"Fase 0 — infraestrutura"</span> <span class="ow">in</span> <span class="n">html</span>
+    <span class="k">assert</span> <span class="s2">"Painel de testes"</span> <span class="ow">in</span> <span class="n">html</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_teste_sem_markers_aparece_em_sem_fase_e_sem_area"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">teste sem markers aparece em sem fase e sem area</span><span class="duration">0 ms</span></div><p class="doc">Dado um teste sem markers de fase e área, então ele aparece em `Sem fase` / `Sem área`.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_teste_sem_markers_aparece_em_sem_fase_e_sem_area</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dado um teste sem markers de fase e área, então ele aparece em `Sem fase` / `Sem área`."""</span>
+    <span class="n">html</span> <span class="o">=</span> <span class="n">render_html</span><span class="p">([</span><span class="n">um_teste</span><span class="p">(</span><span class="n">phase</span><span class="o">=</span><span class="s2">"sem-fase"</span><span class="p">,</span> <span class="n">area</span><span class="o">=</span><span class="s2">"sem-area"</span><span class="p">)],</span> <span class="n">uma_execucao</span><span class="p">(),</span> <span class="p">[])</span>
+
+    <span class="k">assert</span> <span class="s2">"Sem fase"</span> <span class="ow">in</span> <span class="n">html</span> <span class="ow">and</span> <span class="s2">"Sem área"</span> <span class="ow">in</span> <span class="n">html</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_docstring_aparece_e_e_escapada_como_texto"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">docstring aparece e e escapada como texto</span><span class="duration">0 ms</span></div><p class="doc">Dada uma docstring com `&lt;` e `&amp;`, quando gero o painel, então ela aparece escapada.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_docstring_aparece_e_e_escapada_como_texto</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dada uma docstring com `&lt;` e `&amp;`, quando gero o painel, então ela aparece escapada."""</span>
+    <span class="n">teste</span> <span class="o">=</span> <span class="n">um_teste</span><span class="p">(</span><span class="n">docstring</span><span class="o">=</span><span class="s2">"Dado a &lt; b &amp; c, então ok."</span><span class="p">)</span>
+
+    <span class="n">html</span> <span class="o">=</span> <span class="n">render_html</span><span class="p">([</span><span class="n">teste</span><span class="p">],</span> <span class="n">uma_execucao</span><span class="p">(),</span> <span class="n">history</span><span class="o">=</span><span class="p">[])</span>
+
+    <span class="k">assert</span> <span class="s1">'&lt;p class="doc"&gt;Dado a &amp;lt; b &amp;amp; c, então ok.&lt;/p&gt;'</span> <span class="ow">in</span> <span class="n">html</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_codigo_do_teste_fica_recolhivel_e_com_destaque_de_sintaxe"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">codigo do teste fica recolhivel e com destaque de sintaxe</span><span class="duration">0 ms</span></div><p class="doc">Dado o código de um teste, então ele fica num &lt;details&gt; com destaque do pygments.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_codigo_do_teste_fica_recolhivel_e_com_destaque_de_sintaxe</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dado o código de um teste, então ele fica num &lt;details&gt; com destaque do pygments."""</span>
+    <span class="n">html</span> <span class="o">=</span> <span class="n">render_html</span><span class="p">([</span><span class="n">um_teste</span><span class="p">()],</span> <span class="n">uma_execucao</span><span class="p">(),</span> <span class="n">history</span><span class="o">=</span><span class="p">[])</span>
+
+    <span class="k">assert</span> <span class="s1">'&lt;details class="code"&gt;&lt;summary&gt;Código do teste&lt;/summary&gt;'</span> <span class="ow">in</span> <span class="n">html</span>
+    <span class="k">assert</span> <span class="s1">'&lt;div class="highlight"&gt;'</span> <span class="ow">in</span> <span class="n">html</span>
+    <span class="k">assert</span> <span class="s1">'&lt;span class="k"&gt;def&lt;/span&gt;'</span> <span class="ow">in</span> <span class="n">html</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_painel_contem_mapa_de_capacidades_com_as_docstrings"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">painel contem mapa de capacidades com as docstrings</span><span class="duration">0 ms</span></div><p class="doc">Dado um teste aprovado, então sua docstring aparece na seção Mapa de capacidades.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_painel_contem_mapa_de_capacidades_com_as_docstrings</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dado um teste aprovado, então sua docstring aparece na seção Mapa de capacidades."""</span>
+    <span class="n">html</span> <span class="o">=</span> <span class="n">render_html</span><span class="p">([</span><span class="n">um_teste</span><span class="p">(</span><span class="n">docstring</span><span class="o">=</span><span class="s2">"Sabe gerar o painel."</span><span class="p">)],</span> <span class="n">uma_execucao</span><span class="p">(),</span> <span class="p">[])</span>
+
+    <span class="n">secao</span> <span class="o">=</span> <span class="n">html</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">'id="capacidades"'</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"&lt;/section&gt;"</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="s2">"&lt;li&gt;Sabe gerar o painel.&lt;/li&gt;"</span> <span class="ow">in</span> <span class="n">secao</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_historico_resume_a_execucao_com_totais_e_contagens_por_fase_e_area"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">historico resume a execucao com totais e contagens por fase e area</span><span class="duration">0 ms</span></div><p class="doc">Dada uma execução com 3 testes, quando resumo para o histórico, então os totais batem.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_historico_resume_a_execucao_com_totais_e_contagens_por_fase_e_area</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dada uma execução com 3 testes, quando resumo para o histórico, então os totais batem."""</span>
+    <span class="n">testes</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">um_teste</span><span class="p">(</span><span class="n">phase</span><span class="o">=</span><span class="s2">"fase0"</span><span class="p">,</span> <span class="n">area</span><span class="o">=</span><span class="s2">"relatorio"</span><span class="p">),</span>
+        <span class="n">um_teste</span><span class="p">(</span><span class="n">phase</span><span class="o">=</span><span class="s2">"fase0"</span><span class="p">,</span> <span class="n">area</span><span class="o">=</span><span class="s2">"execucao"</span><span class="p">),</span>
+        <span class="n">um_teste</span><span class="p">(</span><span class="n">phase</span><span class="o">=</span><span class="s2">"fase1"</span><span class="p">,</span> <span class="n">area</span><span class="o">=</span><span class="s2">"diff"</span><span class="p">,</span> <span class="n">outcome</span><span class="o">=</span><span class="n">SKIPPED</span><span class="p">),</span>
+    <span class="p">]</span>
+
+    <span class="n">entrada</span> <span class="o">=</span> <span class="n">history_entry</span><span class="p">(</span><span class="n">testes</span><span class="p">,</span> <span class="n">uma_execucao</span><span class="p">())</span>
+
+    <span class="k">assert</span> <span class="n">entrada</span><span class="p">[</span><span class="s2">"totals"</span><span class="p">]</span> <span class="o">==</span> <span class="p">{</span><span class="s2">"passed"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">"failed"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">"skipped"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"total"</span><span class="p">:</span> <span class="mi">3</span><span class="p">}</span>
+    <span class="k">assert</span> <span class="n">entrada</span><span class="p">[</span><span class="s2">"by_phase"</span><span class="p">]</span> <span class="o">==</span> <span class="p">{</span><span class="s2">"fase0"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">"fase1"</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+    <span class="k">assert</span> <span class="n">entrada</span><span class="p">[</span><span class="s2">"by_area"</span><span class="p">]</span> <span class="o">==</span> <span class="p">{</span><span class="s2">"diff"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"execucao"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"relatorio"</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+    <span class="k">assert</span> <span class="n">entrada</span><span class="p">[</span><span class="s2">"parent_hash"</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"3f876ab"</span><span class="p">)</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_historico_grava_um_json_por_commit_com_data_e_hash_no_nome"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">historico grava um json por commit com data e hash no nome</span><span class="duration">3 ms</span></div><p class="doc">Dadas execuções sobre dois commits, então há dois JSONs, nomeados por data e hash.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_historico_grava_um_json_por_commit_com_data_e_hash_no_nome</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dadas execuções sobre dois commits, então há dois JSONs, nomeados por data e hash."""</span>
+    <span class="n">primeira</span> <span class="o">=</span> <span class="n">history_entry</span><span class="p">([</span><span class="n">um_teste</span><span class="p">()],</span> <span class="n">uma_execucao</span><span class="p">())</span>
+    <span class="n">segunda</span> <span class="o">=</span> <span class="n">history_entry</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">um_teste</span><span class="p">(),</span> <span class="n">um_teste</span><span class="p">()],</span>
+        <span class="n">uma_execucao</span><span class="p">(</span><span class="n">generated_at</span><span class="o">=</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2026</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">parent_hash</span><span class="o">=</span><span class="s2">"abcdef1"</span> <span class="o">*</span> <span class="mi">5</span><span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="n">write_history_entry</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">,</span> <span class="n">primeira</span><span class="p">)</span>
+    <span class="n">write_history_entry</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">,</span> <span class="n">segunda</span><span class="p">)</span>
+
+    <span class="n">nomes</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">tmp_path</span><span class="o">.</span><span class="n">iterdir</span><span class="p">())</span>
+    <span class="k">assert</span> <span class="n">nomes</span> <span class="o">==</span> <span class="p">[</span><span class="s2">"20261031T143005_3f876ab.json"</span><span class="p">,</span> <span class="s2">"20261101T090000_abcdef1.json"</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">((</span><span class="n">tmp_path</span> <span class="o">/</span> <span class="n">nomes</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">))[</span><span class="s2">"totals"</span><span class="p">][</span><span class="s2">"total"</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_historico_e_lido_do_mais_antigo_para_o_mais_recente_ignorando_arquivos_invalidos"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">historico e lido do mais antigo para o mais recente ignorando arquivos invalidos</span><span class="duration">1 ms</span></div><p class="doc">Dados JSONs válidos e um corrompido, quando leio o histórico, então vêm os válidos.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_historico_e_lido_do_mais_antigo_para_o_mais_recente_ignorando_arquivos_invalidos</span><span class="p">(</span>
+    <span class="n">tmp_path</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dados JSONs válidos e um corrompido, quando leio o histórico, então vêm os válidos."""</span>
+    <span class="n">write_history_entry</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">,</span> <span class="n">history_entry</span><span class="p">([</span><span class="n">um_teste</span><span class="p">()],</span> <span class="n">uma_execucao</span><span class="p">()))</span>
+    <span class="n">write_history_entry</span><span class="p">(</span>
+        <span class="n">tmp_path</span><span class="p">,</span>
+        <span class="n">history_entry</span><span class="p">([</span><span class="n">um_teste</span><span class="p">()],</span> <span class="n">uma_execucao</span><span class="p">(</span><span class="n">generated_at</span><span class="o">=</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2025</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))),</span>
+    <span class="p">)</span>
+    <span class="p">(</span><span class="n">tmp_path</span> <span class="o">/</span> <span class="s2">"99999999T999999_lixo.json"</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s2">"{não é json"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
+
+    <span class="n">historico</span> <span class="o">=</span> <span class="n">load_history</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="s2">"generated_at"</span><span class="p">]</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">historico</span><span class="p">]</span> <span class="o">==</span> <span class="p">[</span><span class="s2">"2025-01-01T00:00:00"</span><span class="p">,</span> <span class="s2">"2026-10-31T14:30:05"</span><span class="p">]</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_evolucao_mostra_contagem_por_fase_e_area_ao_longo_dos_commits"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">evolucao mostra contagem por fase e area ao longo dos commits</span><span class="duration">1 ms</span></div><p class="doc">Dado um histórico de dois commits, então a seção Evolução tem uma linha por commit.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_evolucao_mostra_contagem_por_fase_e_area_ao_longo_dos_commits</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dado um histórico de dois commits, então a seção Evolução tem uma linha por commit."""</span>
+    <span class="n">antigo</span> <span class="o">=</span> <span class="n">history_entry</span><span class="p">([</span><span class="n">um_teste</span><span class="p">()],</span> <span class="n">uma_execucao</span><span class="p">(</span><span class="n">parent_message</span><span class="o">=</span><span class="s2">"chore: início"</span><span class="p">))</span>
+    <span class="n">novo</span> <span class="o">=</span> <span class="n">history_entry</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">um_teste</span><span class="p">(),</span> <span class="n">um_teste</span><span class="p">(</span><span class="n">phase</span><span class="o">=</span><span class="s2">"fase1"</span><span class="p">,</span> <span class="n">area</span><span class="o">=</span><span class="s2">"diff"</span><span class="p">)],</span>
+        <span class="n">uma_execucao</span><span class="p">(</span><span class="n">parent_message</span><span class="o">=</span><span class="s2">"feat: diferenças"</span><span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="n">html</span> <span class="o">=</span> <span class="n">render_html</span><span class="p">([</span><span class="n">um_teste</span><span class="p">()],</span> <span class="n">uma_execucao</span><span class="p">(),</span> <span class="n">history</span><span class="o">=</span><span class="p">[</span><span class="n">antigo</span><span class="p">,</span> <span class="n">novo</span><span class="p">])</span>
+
+    <span class="n">secao</span> <span class="o">=</span> <span class="n">html</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">'id="evolucao"'</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="n">secao</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">"&lt;tr&gt;&lt;td&gt;"</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+    <span class="k">assert</span> <span class="n">secao</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">"feat: diferenças"</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">secao</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">"chore: início"</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="s2">"&lt;th&gt;fase1&lt;/th&gt;"</span> <span class="ow">in</span> <span class="n">secao</span> <span class="ow">and</span> <span class="s2">"&lt;th&gt;Diferenças&lt;/th&gt;"</span> <span class="ow">in</span> <span class="n">secao</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_de_testes.py::test_evolucao_sem_historico_avisa_que_ainda_nao_ha_dados"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">evolucao sem historico avisa que ainda nao ha dados</span><span class="duration">1 ms</span></div><p class="doc">Dado um histórico vazio, quando gero o painel, então a Evolução diz `Sem histórico ainda`.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_evolucao_sem_historico_avisa_que_ainda_nao_ha_dados</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Dado um histórico vazio, quando gero o painel, então a Evolução diz `Sem histórico ainda`."""</span>
+    <span class="n">html</span> <span class="o">=</span> <span class="n">render_html</span><span class="p">([</span><span class="n">um_teste</span><span class="p">()],</span> <span class="n">uma_execucao</span><span class="p">(),</span> <span class="n">history</span><span class="o">=</span><span class="p">[])</span>
+
+    <span class="k">assert</span> <span class="s2">"Sem histórico ainda."</span> <span class="ow">in</span> <span class="n">html</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_plugin.py::test_rodar_o_pytest_gera_o_painel_com_cada_teste_e_seu_status"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">rodar o pytest gera o painel com cada teste e seu status</span><span class="duration">66 ms</span></div><p class="doc">Dada uma suíte com aprovado, falho e pulado, quando rodo o pytest, então o painel os traz.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_rodar_o_pytest_gera_o_painel_com_cada_teste_e_seu_status</span><span class="p">(</span><span class="n">pytester</span><span class="p">,</span> <span class="n">sem_git</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dada uma suíte com aprovado, falho e pulado, quando rodo o pytest, então o painel os traz."""</span>
+    <span class="n">resultado</span><span class="p">,</span> <span class="n">painel</span> <span class="o">=</span> <span class="n">rodar_suite</span><span class="p">(</span><span class="n">pytester</span><span class="p">)</span>
+
+    <span class="n">resultado</span><span class="o">.</span><span class="n">assert_outcomes</span><span class="p">(</span><span class="n">passed</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">failed</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">skipped</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">html</span> <span class="o">=</span> <span class="n">painel</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="s2">"programa novo aparece"</span> <span class="ow">in</span> <span class="n">html</span>
+    <span class="k">assert</span> <span class="s1">'&lt;article class="test failed"'</span> <span class="ow">in</span> <span class="n">html</span>
+    <span class="k">assert</span> <span class="s1">'&lt;div class="message"&gt;assert (1 + 1) == 3&lt;/div&gt;'</span> <span class="ow">in</span> <span class="n">html</span>
+    <span class="k">assert</span> <span class="s1">'&lt;div class="message"&gt;requer admin&lt;/div&gt;'</span> <span class="ow">in</span> <span class="n">html</span>
+    <span class="k">assert</span> <span class="s2">"Dado um programa novo, então ele aparece."</span> <span class="ow">in</span> <span class="n">html</span>
+    <span class="n">resultado</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">fnmatch_lines</span><span class="p">([</span><span class="sa">f</span><span class="s2">"painel de testes: </span><span class="si">{</span><span class="n">painel</span><span class="si">}</span><span class="s2">"</span><span class="p">])</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_plugin.py::test_fase_e_area_vem_dos_markers_e_o_da_funcao_prevalece"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">fase e area vem dos markers e o da funcao prevalece</span><span class="duration">43 ms</span></div><p class="doc">Dado marker de fase/área no módulo e outro na função, então o da função define o grupo.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_fase_e_area_vem_dos_markers_e_o_da_funcao_prevalece</span><span class="p">(</span><span class="n">pytester</span><span class="p">,</span> <span class="n">sem_git</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dado marker de fase/área no módulo e outro na função, então o da função define o grupo."""</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">painel</span> <span class="o">=</span> <span class="n">rodar_suite</span><span class="p">(</span><span class="n">pytester</span><span class="p">)</span>
+
+    <span class="n">html</span> <span class="o">=</span> <span class="n">painel</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
+    <span class="n">fase0</span> <span class="o">=</span> <span class="n">html</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">'id="fase0"'</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"&lt;/section&gt;"</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">fase1</span> <span class="o">=</span> <span class="n">html</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">'id="fase1"'</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"&lt;/section&gt;"</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="s2">"marker da funcao prevalece sobre o do modulo"</span> <span class="ow">in</span> <span class="n">fase0</span>
+    <span class="k">assert</span> <span class="s2">"programa novo aparece"</span> <span class="ow">in</span> <span class="n">fase1</span> <span class="ow">and</span> <span class="s2">"Inventário"</span> <span class="ow">in</span> <span class="n">fase1</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_plugin.py::test_historico_so_e_gravado_quando_todos_os_testes_passam"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">historico so e gravado quando todos os testes passam</span><span class="duration">48 ms</span></div><p class="doc">Dada uma suíte com falha, quando rodo com --painel-historico, então nenhum JSON é gravado.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_historico_so_e_gravado_quando_todos_os_testes_passam</span><span class="p">(</span><span class="n">pytester</span><span class="p">,</span> <span class="n">sem_git</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dada uma suíte com falha, quando rodo com --painel-historico, então nenhum JSON é gravado."""</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">painel</span> <span class="o">=</span> <span class="n">rodar_suite</span><span class="p">(</span><span class="n">pytester</span><span class="p">,</span> <span class="s2">"--painel-historico"</span><span class="p">)</span>
+
+    <span class="n">historico</span> <span class="o">=</span> <span class="n">painel</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">"historico"</span>
+    <span class="k">assert</span> <span class="ow">not</span> <span class="n">historico</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">list</span><span class="p">(</span><span class="n">historico</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">"*.json"</span><span class="p">))</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_plugin.py::test_com_todos_aprovados_o_historico_ganha_um_json_e_entra_na_evolucao"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">com todos aprovados o historico ganha um json e entra na evolucao</span><span class="duration">38 ms</span></div><p class="doc">Dada uma suíte toda aprovada, quando rodo com --painel-historico, então grava um JSON.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_com_todos_aprovados_o_historico_ganha_um_json_e_entra_na_evolucao</span><span class="p">(</span><span class="n">pytester</span><span class="p">,</span> <span class="n">sem_git</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dada uma suíte toda aprovada, quando rodo com --painel-historico, então grava um JSON."""</span>
+    <span class="n">resultado</span><span class="p">,</span> <span class="n">painel</span> <span class="o">=</span> <span class="n">rodar_suite</span><span class="p">(</span><span class="n">pytester</span><span class="p">,</span> <span class="s2">"--painel-historico"</span><span class="p">,</span> <span class="s2">"-k"</span><span class="p">,</span> <span class="s2">"programa_novo"</span><span class="p">)</span>
+
+    <span class="n">resultado</span><span class="o">.</span><span class="n">assert_outcomes</span><span class="p">(</span><span class="n">passed</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">deselected</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">jsons</span> <span class="o">=</span> <span class="nb">list</span><span class="p">((</span><span class="n">painel</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">"historico"</span><span class="p">)</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">"*.json"</span><span class="p">))</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">jsons</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+    <span class="n">entrada</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">jsons</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">))</span>
+    <span class="k">assert</span> <span class="n">entrada</span><span class="p">[</span><span class="s2">"totals"</span><span class="p">][</span><span class="s2">"total"</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span>
+    <span class="k">assert</span> <span class="n">entrada</span><span class="p">[</span><span class="s2">"by_phase"</span><span class="p">]</span> <span class="o">==</span> <span class="p">{</span><span class="s2">"fase1"</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+    <span class="n">html</span> <span class="o">=</span> <span class="n">painel</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">html</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">'id="evolucao"'</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">"&lt;tr&gt;&lt;td&gt;"</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_plugin.py::test_opcao_sem_painel_nao_gera_arquivo"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">opcao sem painel nao gera arquivo</span><span class="duration">37 ms</span></div><p class="doc">Dada a opção --sem-painel, quando rodo o pytest, então nenhum painel é gerado.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_opcao_sem_painel_nao_gera_arquivo</span><span class="p">(</span><span class="n">pytester</span><span class="p">,</span> <span class="n">sem_git</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dada a opção --sem-painel, quando rodo o pytest, então nenhum painel é gerado."""</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">painel</span> <span class="o">=</span> <span class="n">rodar_suite</span><span class="p">(</span><span class="n">pytester</span><span class="p">,</span> <span class="s2">"--sem-painel"</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="ow">not</span> <span class="n">painel</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_painel_plugin.py::test_markers_desconhecidos_sao_rejeitados_e_os_da_spec_sao_aceitos"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">markers desconhecidos sao rejeitados e os da spec sao aceitos</span><span class="duration">104 ms</span></div><p class="doc">Dado um marker fora da SPEC, quando rodo com --strict-markers, então a coleta falha.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_markers_desconhecidos_sao_rejeitados_e_os_da_spec_sao_aceitos</span><span class="p">(</span><span class="n">pytester</span><span class="p">,</span> <span class="n">sem_git</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dado um marker fora da SPEC, quando rodo com --strict-markers, então a coleta falha."""</span>
+    <span class="n">pytester</span><span class="o">.</span><span class="n">makepyfile</span><span class="p">(</span>
+        <span class="n">test_markers</span><span class="o">=</span><span class="s2">"""</span>
+<span class="s2">        import pytest</span>
+
+<span class="s2">        @pytest.mark.fase0</span>
+<span class="s2">        @pytest.mark.sistema</span>
+<span class="s2">        @pytest.mark.banco</span>
+<span class="s2">        def test_ok():</span>
+<span class="s2">            pass</span>
+
+<span class="s2">        @pytest.mark.fase9</span>
+<span class="s2">        def test_invalido():</span>
+<span class="s2">            pass</span>
+<span class="s2">        """</span>
+    <span class="p">)</span>
+
+    <span class="n">resultado</span> <span class="o">=</span> <span class="n">pytester</span><span class="o">.</span><span class="n">runpytest</span><span class="p">(</span>
+        <span class="s2">"-p"</span><span class="p">,</span> <span class="s2">"tools.test_dashboard.plugin"</span><span class="p">,</span> <span class="s2">"--sem-painel"</span><span class="p">,</span> <span class="s2">"--strict-markers"</span>
+    <span class="p">)</span>
+
+    <span class="n">resultado</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">fnmatch_lines</span><span class="p">([</span><span class="s2">"*'fase9' not found in `markers`*"</span><span class="p">])</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_pre_commit.py::test_com_todos_os_testes_passando_o_commit_inclui_o_painel_e_o_json_do_historico"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">com todos os testes passando o commit inclui o painel e o json do historico</span><span class="duration">436 ms</span></div><p class="doc">Dada uma suíte aprovada, quando faço o commit, então ele contém index.html e um JSON novo.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_com_todos_os_testes_passando_o_commit_inclui_o_painel_e_o_json_do_historico</span><span class="p">(</span><span class="n">repo</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dada uma suíte aprovada, quando faço o commit, então ele contém index.html e um JSON novo."""</span>
+    <span class="n">repo</span><span class="o">.</span><span class="n">escrever</span><span class="p">(</span><span class="s2">"tests/test_exemplo.py"</span><span class="p">,</span> <span class="n">TESTE_APROVADO</span><span class="p">)</span>
+
+    <span class="n">resultado</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">commit</span><span class="p">(</span><span class="s2">"chore: início"</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">resultado</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">resultado</span><span class="o">.</span><span class="n">stderr</span>
+    <span class="n">arquivos</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">arquivos_do_head</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="s2">"docs/testes/index.html"</span> <span class="ow">in</span> <span class="n">arquivos</span>
+    <span class="k">assert</span> <span class="nb">any</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"docs/testes/historico/"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">a</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">".json"</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">arquivos</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">repo</span><span class="o">.</span><span class="n">git</span><span class="p">(</span><span class="s2">"status"</span><span class="p">,</span> <span class="s2">"--porcelain"</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span> <span class="o">==</span> <span class="s2">""</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_pre_commit.py::test_com_um_teste_falhando_o_commit_e_bloqueado_e_nada_e_gravado"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">com um teste falhando o commit e bloqueado e nada e gravado</span><span class="duration">819 ms</span></div><p class="doc">Dado um teste falhando de propósito, quando faço o commit, então ele é cancelado.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_com_um_teste_falhando_o_commit_e_bloqueado_e_nada_e_gravado</span><span class="p">(</span><span class="n">repo</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dado um teste falhando de propósito, quando faço o commit, então ele é cancelado."""</span>
+    <span class="n">repo</span><span class="o">.</span><span class="n">escrever</span><span class="p">(</span><span class="s2">"tests/test_exemplo.py"</span><span class="p">,</span> <span class="n">TESTE_APROVADO</span><span class="p">)</span>
+    <span class="n">repo</span><span class="o">.</span><span class="n">commit</span><span class="p">(</span><span class="s2">"chore: início"</span><span class="p">)</span>
+    <span class="n">repo</span><span class="o">.</span><span class="n">escrever</span><span class="p">(</span><span class="s2">"tests/test_exemplo.py"</span><span class="p">,</span> <span class="n">TESTE_FALHO</span><span class="p">)</span>
+
+    <span class="n">resultado</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">commit</span><span class="p">(</span><span class="s2">"test: teste que falha"</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">resultado</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span>
+    <span class="k">assert</span> <span class="s2">"commit bloqueado"</span> <span class="ow">in</span> <span class="n">resultado</span><span class="o">.</span><span class="n">stderr</span>
+    <span class="k">assert</span> <span class="n">repo</span><span class="o">.</span><span class="n">quantidade_de_commits</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">repo</span><span class="o">.</span><span class="n">historico_no_head</span><span class="p">())</span> <span class="o">==</span> <span class="mi">1</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_pre_commit.py::test_cada_commit_acrescenta_um_json_ao_historico"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">cada commit acrescenta um json ao historico</span><span class="duration">937 ms</span></div><p class="doc">Dados dois commits aprovados, então o histórico no HEAD tem dois JSONs.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_cada_commit_acrescenta_um_json_ao_historico</span><span class="p">(</span><span class="n">repo</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dados dois commits aprovados, então o histórico no HEAD tem dois JSONs."""</span>
+    <span class="n">repo</span><span class="o">.</span><span class="n">escrever</span><span class="p">(</span><span class="s2">"tests/test_exemplo.py"</span><span class="p">,</span> <span class="n">TESTE_APROVADO</span><span class="p">)</span>
+    <span class="n">repo</span><span class="o">.</span><span class="n">commit</span><span class="p">(</span><span class="s2">"chore: início"</span><span class="p">)</span>
+    <span class="n">repo</span><span class="o">.</span><span class="n">escrever</span><span class="p">(</span><span class="s2">"tests/test_outro.py"</span><span class="p">,</span> <span class="n">TESTE_APROVADO</span><span class="p">)</span>
+
+    <span class="n">resultado</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">commit</span><span class="p">(</span><span class="s2">"test: outro teste"</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">resultado</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">resultado</span><span class="o">.</span><span class="n">stderr</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">repo</span><span class="o">.</span><span class="n">historico_no_head</span><span class="p">())</span> <span class="o">==</span> <span class="mi">2</span>
+</pre></div>
+</details></article><article class="test passed" id="tests/test_pre_commit.py::test_alteracoes_fora_do_commit_bloqueiam_para_testar_exatamente_o_conteudo_commitado"><div class="test-head"><span class="status" title="aprovado">✅</span><span class="test-name">alteracoes fora do commit bloqueiam para testar exatamente o conteudo commitado</span><span class="duration">669 ms</span></div><p class="doc">Dado um arquivo alterado mas não incluído, quando faço o commit, então ele é bloqueado.</p><details class="code"><summary>Código do teste</summary><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_alteracoes_fora_do_commit_bloqueiam_para_testar_exatamente_o_conteudo_commitado</span><span class="p">(</span><span class="n">repo</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dado um arquivo alterado mas não incluído, quando faço o commit, então ele é bloqueado."""</span>
+    <span class="n">repo</span><span class="o">.</span><span class="n">escrever</span><span class="p">(</span><span class="s2">"tests/test_exemplo.py"</span><span class="p">,</span> <span class="n">TESTE_APROVADO</span><span class="p">)</span>
+    <span class="n">repo</span><span class="o">.</span><span class="n">commit</span><span class="p">(</span><span class="s2">"chore: início"</span><span class="p">)</span>
+    <span class="n">repo</span><span class="o">.</span><span class="n">escrever</span><span class="p">(</span><span class="s2">"README.md"</span><span class="p">,</span> <span class="s2">"novo</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">repo</span><span class="o">.</span><span class="n">git</span><span class="p">(</span><span class="s2">"add"</span><span class="p">,</span> <span class="s2">"README.md"</span><span class="p">)</span>
+    <span class="n">repo</span><span class="o">.</span><span class="n">escrever</span><span class="p">(</span><span class="s2">"tests/test_exemplo.py"</span><span class="p">,</span> <span class="n">TESTE_FALHO</span><span class="p">)</span>
+
+    <span class="n">resultado</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">git</span><span class="p">(</span><span class="s2">"commit"</span><span class="p">,</span> <span class="s2">"-m"</span><span class="p">,</span> <span class="s2">"docs: readme"</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">resultado</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span>
+    <span class="k">assert</span> <span class="s2">"alterações fora do commit"</span> <span class="ow">in</span> <span class="n">resultado</span><span class="o">.</span><span class="n">stderr</span>
+    <span class="k">assert</span> <span class="s2">"tests/test_exemplo.py"</span> <span class="ow">in</span> <span class="n">resultado</span><span class="o">.</span><span class="n">stderr</span>
+    <span class="k">assert</span> <span class="n">repo</span><span class="o">.</span><span class="n">quantidade_de_commits</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span>
+</pre></div>
+</details></article></section></section><section id="evolucao"><h2>Evolução</h2><p>Contagem de testes por fase e por área ao longo dos commits (mais recente no topo).</p><div class="table-wrap"><table><tr><th>Data</th><th>Commit anterior</th><th>Total</th><th>fase0</th><th>Execução</th><th>Painel de testes</th></tr><tr><td>2026-10-31 18:20:58</td><td class="commit"><code>3f876ab</code> Initial commit</td><td>40</td><td>40</td><td>8</td><td>32</td></tr></table></div></section></main></body></html>

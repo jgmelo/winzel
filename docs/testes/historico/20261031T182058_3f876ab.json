@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "generated_at": "2026-10-31T18:20:58",
+  "parent_hash": "3f876ab2b19ede7beb921263a5ce7f1c0be4d6f2",
+  "parent_message": "Initial commit",
+  "branch": "main",
+  "duration_s": 3.627,
+  "totals": {
+    "passed": 40,
+    "failed": 0,
+    "skipped": 0,
+    "total": 40
+  },
+  "by_phase": {
+    "fase0": 40
+  },
+  "by_area": {
+    "execucao": 8,
+    "relatorio": 32
+  }
+}
