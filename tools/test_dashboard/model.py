@@ -1,4 +1,8 @@
-"""Data structures for the test dashboard, independent of pytest."""
+"""Data structures for the test dashboard, independent of pytest.
+
+A *case* is one collected test (a parametrized function yields several cases);
+a *function* is one `def test_…`; functions are grouped by test file.
+"""
 
 from __future__ import annotations
 
@@ -15,7 +19,7 @@ OUTCOME_LABELS = {PASSED: "aprovado", FAILED: "falhou", SKIPPED: "pulado"}
 
 @dataclass
 class TestRecord:
-    """Result of one test, with everything the dashboard shows about it."""
+    """Result of one test case, with everything the dashboard shows about it."""
 
     __test__ = False  # not a pytest test class
 
@@ -28,6 +32,21 @@ class TestRecord:
     duration_s: float = 0.0
     message: str = ""
     source: str = ""
+    file: str = ""
+    function: str = ""
+    params: str = ""
+    line: int = 0
+    file_doc: str = ""
+
+    def __post_init__(self) -> None:
+        path, _, rest = self.nodeid.partition("::")
+        if not self.file:
+            self.file = path
+        if not self.function:
+            base = rest.split("::")[-1] if rest else self.nodeid
+            self.function, _, params = base.partition("[")
+            if not self.params:
+                self.params = params.rstrip("]")
 
 
 @dataclass
@@ -63,20 +82,88 @@ class Totals:
 
 
 @dataclass
-class AreaGroup:
-    area: str
-    records: list[TestRecord] = field(default_factory=list)
+class FunctionGroup:
+    """One test function and its cases (one case unless parametrized)."""
+
+    file: str
+    function: str
+    cases: list[TestRecord] = field(default_factory=list)
+
+    @property
+    def first(self) -> TestRecord:
+        return self.cases[0]
+
+    @property
+    def name(self) -> str:
+        return self.first.name.split(" [")[0]
+
+    @property
+    def docstring(self) -> str:
+        return self.first.docstring
+
+    @property
+    def phase(self) -> str:
+        return self.first.phase
+
+    @property
+    def area(self) -> str:
+        return self.first.area
+
+    @property
+    def line(self) -> int:
+        return self.first.line
+
+    @property
+    def source(self) -> str:
+        return self.first.source
+
+    @property
+    def parametrized(self) -> bool:
+        return len(self.cases) > 1 or bool(self.first.params)
 
     @property
     def totals(self) -> Totals:
-        return Totals.of(self.records)
+        return Totals.of(self.cases)
+
+    @property
+    def outcome(self) -> str:
+        """Failed if any case failed; skipped if all were skipped; passed otherwise."""
+        totals = self.totals
+        if totals.failed:
+            return FAILED
+        if totals.skipped == totals.total:
+            return SKIPPED
+        return PASSED
+
+    @property
+    def duration_s(self) -> float:
+        return sum(c.duration_s for c in self.cases)
 
 
 @dataclass
-class PhaseGroup:
-    phase: str
-    areas: list[AreaGroup] = field(default_factory=list)
+class FileGroup:
+    """One test file (a topic of the dashboard) and its functions."""
+
+    file: str
+    functions: list[FunctionGroup] = field(default_factory=list)
+
+    @property
+    def topic(self) -> str:
+        stem = self.file.rsplit("/", 1)[-1].removesuffix(".py")
+        return stem.removeprefix("test_")
+
+    @property
+    def anchor(self) -> str:
+        return f"arquivo-{self.topic}"
+
+    @property
+    def lead(self) -> str:
+        return self.functions[0].first.file_doc if self.functions else ""
+
+    @property
+    def cases(self) -> list[TestRecord]:
+        return [c for f in self.functions for c in f.cases]
 
     @property
     def totals(self) -> Totals:
-        return Totals.of([r for group in self.areas for r in group.records])
+        return Totals.of(self.cases)

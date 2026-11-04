@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "generated_at": "2026-11-04T01:58:12",
+  "parent_hash": "6d4a2ba1bbde2cbd008094f50536f49c4dfc42b3",
+  "parent_message": "feat: lista de pacotes ignorados em store_apps (padrão: índice do winget)",
+  "branch": "main",
+  "duration_s": 42.579,
+  "totals": {
+    "passed": 420,
+    "failed": 0,
+    "skipped": 0,
+    "total": 420
+  },
+  "by_phase": {
+    "fase0": 59,
+    "fase1": 105,
+    "fase2": 77,
+    "fase3": 74,
+    "fase4": 51,
+    "fase5": 54
+  },
+  "by_area": {
+    "aprovacoes": 13,
+    "armazenamento": 20,
+    "atualizacoes": 10,
+    "backup": 12,
+    "banco": 27,
+    "diff": 32,
+    "execucao": 36,
+    "hardware": 17,
+    "interface": 68,
+    "inventario": 93,
+    "milestones": 32,
+    "relatorio": 51,
+    "seguranca": 9
+  }
+}

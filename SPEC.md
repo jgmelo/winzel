@@ -344,11 +344,12 @@ Todo teste declara um marker de fase e um de área; a suíte se recusa a rodar s
 
 Arquivo versionado em `docs/testes/index.html`, gerado a cada commit.
 
-- **Cabeçalho:** commit anterior (hash e mensagem), branch, data e hora, totais (aprovados, falhos, pulados) e duração. O conteúdo testado é exatamente o do commit que contém o relatório.
-- **Agrupamento** por fase e por área, cada grupo com seu sumário.
-- **Por teste:** nome legível (sem `test_`, com espaços), docstring, status (✅ ❌ ⏭️), duração e **código do teste**, recolhível e com destaque de sintaxe (pygments).
+- **Barra lateral fixa:** links para as seções e para cada arquivo de teste (com a contagem de casos; arquivos com falhas em destaque), busca por texto e filtros por situação ("só falhos"), área e fase.
+- **Visão geral:** commit anterior (hash e mensagem), branch, data e hora e duração; blocos com funções, casos, arquivos, aprovados, falhos e pulados; **matriz de calor arquivo × área** (casos e funções por célula; colunas vazias mostram áreas sem teste); resumo **por fase**. O conteúdo testado é exatamente o do commit que contém o relatório.
+- **Uma tabela por arquivo de teste** (com a docstring do módulo como resumo): por função, status, nome legível (sem `test_`, com espaços), `função · arquivo:linha`, docstring, mensagem de falha ou motivo do pulo, fase, área, casos (os parametrizados agrupados num item recolhível, cada um com seu status), duração e **código do teste**, recolhível e com destaque de sintaxe (pygments).
 - **Mapa de capacidades:** visão-resumo só com as docstrings, por área ("o que o winzel sabe fazer hoje").
 - **Evolução:** contagem de testes por área e fase ao longo dos commits, a partir do histórico.
+- **Aparência:** tema claro e escuro (segue o sistema); página única, sem dependências externas.
 
 **Histórico:** um resumo em JSON por commit em `docs/testes/historico/`.
 

@@ -71,6 +71,13 @@ def item_metadata(item: pytest.Item) -> TestRecord:
         source = inspect.getsource(func) if func is not None else ""
     except OSError, TypeError:
         source = ""
+    module = getattr(item, "module", None)
+    module_doc = (inspect.getdoc(module) or "") if module is not None else ""
+    callspec = getattr(item, "callspec", None)
+    try:
+        line = func.__code__.co_firstlineno if func is not None else 0
+    except AttributeError:
+        line = (item.location[1] or 0) + 1
     return TestRecord(
         nodeid=item.nodeid,
         name=readable_name(item.name),
@@ -79,6 +86,11 @@ def item_metadata(item: pytest.Item) -> TestRecord:
         area=area,
         outcome=PASSED,
         source=source,
+        file=item.nodeid.split("::")[0],
+        function=getattr(item, "originalname", None) or item.name.split("[")[0],
+        params=callspec.id if callspec is not None else "",
+        line=line,
+        file_doc=module_doc.strip().splitlines()[0] if module_doc.strip() else "",
     )
 
 

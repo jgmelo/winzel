@@ -10,6 +10,8 @@ import pytest
 pytestmark = [pytest.mark.fase0, pytest.mark.relatorio]
 
 SUITE_DE_EXEMPLO = '''
+"""Suíte de exemplo do painel."""
+
 import pytest
 
 pytestmark = [pytest.mark.fase1, pytest.mark.inventario]
@@ -62,11 +64,13 @@ def test_rodar_o_pytest_gera_o_painel_com_cada_teste_e_seu_status(pytester, sem_
 
     resultado.assert_outcomes(passed=2, failed=1, skipped=1)
     html = painel.read_text(encoding="utf-8")
-    assert "programa novo aparece" in html
-    assert '<article class="test failed"' in html
-    assert '<div class="message">assert (1 + 1) == 3</div>' in html
-    assert '<div class="message">requer admin</div>' in html
+    assert "<strong>programa novo aparece</strong>" in html
+    assert '<tr data-row id="t-exemplo-test_soma_errada" class="failed"' in html
+    assert '<div class="message failed">❌ assert (1 + 1) == 3</div>' in html
+    assert '<div class="message skipped">⏭️ requer admin</div>' in html
     assert "Dado um programa novo, então ele aparece." in html
+    assert "<code>test_exemplo.py</code> · 4 funções · 4 casos" in html
+    assert "— Suíte de exemplo do painel." in html
     resultado.stdout.fnmatch_lines([f"painel de testes: {painel}"])
 
 
@@ -75,10 +79,10 @@ def test_fase_e_area_vem_dos_markers_e_o_da_funcao_prevalece(pytester, sem_git):
     _, painel = rodar_suite(pytester)
 
     html = painel.read_text(encoding="utf-8")
-    fase0 = html.split('id="fase0"')[1].split("</section>")[0]
-    fase1 = html.split('id="fase1"')[1].split("</section>")[0]
-    assert "marker da funcao prevalece sobre o do modulo" in fase0
-    assert "programa novo aparece" in fase1 and "Inventário" in fase1
+    marcada = html.split('id="t-exemplo-test_marker_da_funcao_prevalece_sobre_o_do_modulo"')[1]
+    modulo = html.split('id="t-exemplo-test_programa_novo_aparece"')[1]
+    assert marcada.startswith(' class="passed" data-area="relatorio" data-phase="fase0"')
+    assert modulo.startswith(' class="passed" data-area="inventario" data-phase="fase1"')
 
 
 def test_historico_so_e_gravado_quando_todos_os_testes_passam(pytester, sem_git):
@@ -133,3 +137,29 @@ def test_markers_desconhecidos_sao_rejeitados_e_os_da_spec_sao_aceitos(pytester,
     )
 
     resultado.stdout.fnmatch_lines(["*'fase9' not found in `markers`*"])
+
+
+def test_casos_parametrizados_sao_agrupados_com_linha_e_parametros(pytester, sem_git):
+    """Dada uma função parametrizada em 3 casos, então o painel mostra uma linha com os 3."""
+    pytester.makepyfile(
+        test_param="""
+        import pytest
+
+        pytestmark = [pytest.mark.fase0, pytest.mark.relatorio]
+
+
+        @pytest.mark.parametrize("valor", [1, 2, 3])
+        def test_dobro(valor):
+            \"\"\"Dado um valor, então o dobro é par.\"\"\"
+            assert (valor * 2) % 2 == 0
+        """
+    )
+    painel = pytester.path / "saida" / "index.html"
+
+    pytester.runpytest("-p", "tools.test_dashboard.plugin", f"--painel={painel}")
+
+    html = painel.read_text(encoding="utf-8")
+    trecho = html.split('id="t-param-test_dobro"')[1].split("</tr>")[0]
+    assert html.count('<tr data-row id="t-param-test_dobro"') == 1
+    assert "<summary>3 casos</summary>" in trecho
+    assert "<code>test_dobro</code> · test_param.py:6" in trecho  # linha do decorador

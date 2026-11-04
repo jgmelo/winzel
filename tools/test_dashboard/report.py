@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from dataclasses import dataclass
 from pathlib import Path
 
-from .model import PASSED, AreaGroup, PhaseGroup, RunMeta, TestRecord, Totals
-from .taxonomy import area_order, phase_order
+from .model import PASSED, FileGroup, FunctionGroup, RunMeta, TestRecord, Totals
+from .taxonomy import AREAS, PHASES, area_order, phase_order
 
 MAX_MESSAGE_CHARS = 200
 HISTORY_SCHEMA = 1
@@ -32,24 +33,53 @@ def summarize_message(text: str, limit: int = MAX_MESSAGE_CHARS) -> str:
     return first
 
 
-def group_records(records: list[TestRecord]) -> list[PhaseGroup]:
-    """Group records by phase, then by area, in taxonomy order."""
-    by_phase: dict[str, dict[str, list[TestRecord]]] = {}
+def group_by_file(records: list[TestRecord]) -> list[FileGroup]:
+    """Files in alphabetical order; inside each, functions in source order with their cases."""
+    files: dict[str, dict[str, FunctionGroup]] = {}
     for record in records:
-        by_phase.setdefault(record.phase, {}).setdefault(record.area, []).append(record)
-    groups = []
-    for phase in sorted(by_phase, key=lambda p: (phase_order(p), p)):
-        areas = by_phase[phase]
-        groups.append(
-            PhaseGroup(
-                phase=phase,
-                areas=[
-                    AreaGroup(area=area, records=areas[area])
-                    for area in sorted(areas, key=lambda a: (area_order(a), a))
-                ],
-            )
-        )
-    return groups
+        functions = files.setdefault(record.file, {})
+        group = functions.setdefault(record.function, FunctionGroup(record.file, record.function))
+        group.cases.append(record)
+    return [
+        FileGroup(file, sorted(functions.values(), key=lambda f: (f.line, f.function)))
+        for file, functions in sorted(files.items())
+    ]
+
+
+@dataclass
+class MatrixCell:
+    cases: int = 0
+    functions: int = 0
+
+
+def area_columns() -> list[str]:
+    """All areas of the SPEC, so empty columns show areas no test exercises yet."""
+    return list(AREAS)
+
+
+def file_area_matrix(files: list[FileGroup]) -> dict[str, dict[str, MatrixCell]]:
+    """{file: {area: cases and functions}} for the overview heat map."""
+    matrix: dict[str, dict[str, MatrixCell]] = {}
+    for group in files:
+        row = matrix.setdefault(group.file, {})
+        for function in group.functions:
+            cell = row.setdefault(function.area, MatrixCell())
+            cell.cases += len(function.cases)
+            cell.functions += 1
+    return matrix
+
+
+def phase_summary(records: list[TestRecord]) -> dict[str, Totals]:
+    """Totals per phase, in SPEC order (phases without tests are left out)."""
+    by_phase: dict[str, list[TestRecord]] = {}
+    for record in records:
+        by_phase.setdefault(record.phase, []).append(record)
+    order = sorted(by_phase, key=lambda p: (phase_order(p), p))
+    return {phase: Totals.of(by_phase[phase]) for phase in order}
+
+
+def known_phases() -> list[str]:
+    return list(PHASES)
 
 
 def capabilities(records: list[TestRecord]) -> dict[str, list[str]]:
